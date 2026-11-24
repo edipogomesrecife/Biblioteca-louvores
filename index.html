@@ -111,7 +111,16 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label for="filter-style" class="block text-xs font-medium text-slate-600 mb-1">Estilo</label>
-          <div id="filter-style-container"></div>
+          <select
+            id="filter-style"
+            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          >
+            <option value="">Todos os estilos</option>
+            <option value="Adoração">Adoração</option>
+            <option value="Celebração">Celebração</option>
+            <option value="Missões">Missões</option>
+            <option value="__EMPTY__">Sem estilo definido</option>
+          </select>
         </div>
 
         <div>
@@ -201,11 +210,11 @@
 
   <!-- Modal: Importação em Lote (ZIP / Excel) -->
   <div id="modal-import" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full sm:max-w-3xl max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="bg-white w-full sm:max-w-4xl max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
         <div>
           <h2 class="text-base font-semibold text-slate-900">Importar Cronogramas (ZIP ou Excel)</h2>
-          <p class="text-xs text-slate-500">Extrai automaticamente Nome, Cantor/Grupo e Solista, identifica o Estilo quando possível e ignora duplicadas.</p>
+          <p class="text-xs text-slate-500">Lê as colunas <strong>NOME</strong>, <strong>AUTOR</strong> e <strong>SOLO</strong>, classifica entre <strong>Celebração</strong>, <strong>Adoração</strong> ou <strong>Missões</strong> e ignora repetidas.</p>
         </div>
         <button type="button" onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -213,16 +222,15 @@
       </div>
 
       <div class="p-5 overflow-y-auto flex-1 space-y-4">
-        <!-- Área de seleção de arquivo -->
         <label
           for="import-file-input"
-          class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/30 rounded-xl p-6 cursor-pointer transition text-center"
+          class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/30 rounded-xl p-5 cursor-pointer transition text-center"
         >
-          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2">
-            <i data-lucide="folder-archive" class="w-5 h-5"></i>
+          <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-1.5">
+            <i data-lucide="folder-archive" class="w-4 h-4"></i>
           </div>
           <span class="text-sm font-medium text-slate-800">Clique para selecionar seu arquivo .zip ou planilhas (.xlsx, .xls, .csv)</span>
-          <span class="text-xs text-slate-500 mt-1">Você pode selecionar o arquivo drive-download-....zip inteiro de uma vez</span>
+          <span class="text-xs text-slate-500 mt-0.5">Você pode selecionar o arquivo .zip inteiro de uma vez</span>
           <input
             id="import-file-input"
             type="file"
@@ -232,18 +240,41 @@
           />
         </label>
 
-        <!-- Progresso da leitura -->
         <div id="import-parsing-state" class="hidden py-6 flex flex-col items-center justify-center text-slate-600 gap-2">
           <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           <span id="import-parsing-text" class="text-sm">Lendo planilhas...</span>
         </div>
 
-        <!-- Erro na leitura -->
         <div id="import-error" class="hidden text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3"></div>
 
         <!-- Resumo e Prévia -->
         <div id="import-preview-section" class="hidden space-y-3">
           <div id="import-summary-banner" class="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg px-4 py-3 text-xs flex flex-wrap items-center justify-between gap-2"></div>
+
+          <!-- Classificação assistida por IA (opcional para as que ficarem em branco) -->
+          <div id="ai-classify-box" class="hidden bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="text-xs text-slate-600">
+              <strong class="text-slate-800">Classificar músicas em branco com IA (opcional):</strong>
+              <span>Cole uma chave gratuita do Google AI Studio (Gemini) para analisar as letras/ritmos das músicas que ficaram sem estilo.</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <input
+                id="gemini-api-key-input"
+                type="password"
+                placeholder="Cole sua Gemini API Key..."
+                class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-white w-48 focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                id="btn-ai-classify"
+                type="button"
+                onclick="classifyRemainingWithAI()"
+                class="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition"
+              >
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>Classificar</span>
+              </button>
+            </div>
+          </div>
 
           <div id="import-table-container" class="border border-slate-200 rounded-xl overflow-x-auto max-h-80">
             <table class="w-full text-left border-collapse text-xs">
@@ -253,9 +284,9 @@
                     <input id="import-select-all" type="checkbox" checked class="rounded border-slate-300 text-indigo-600" />
                   </th>
                   <th class="py-2.5 px-3">Nome</th>
-                  <th class="py-2.5 px-3">Cantor/Grupo</th>
-                  <th class="py-2.5 px-3">Estilo (auto / editável)</th>
-                  <th class="py-2.5 px-3">Solista</th>
+                  <th class="py-2.5 px-3">Cantor/Grupo (Autor)</th>
+                  <th class="py-2.5 px-3 w-36">Estilo</th>
+                  <th class="py-2.5 px-3">Solista (Solo)</th>
                 </tr>
               </thead>
               <tbody id="import-preview-tbody" class="divide-y divide-slate-100"></tbody>
@@ -327,14 +358,15 @@
             <label for="input-style" class="block text-sm font-medium text-slate-700 mb-1">
               Estilo <span class="text-slate-400 font-normal">(opcional)</span>
             </label>
-            <input
+            <select
               id="input-style"
-              type="text"
-              list="datalist-styles"
-              placeholder="Ex.: Adoração, Celebração"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-            <datalist id="datalist-styles"></datalist>
+              class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Em branco</option>
+              <option value="Adoração">Adoração</option>
+              <option value="Celebração">Celebração</option>
+              <option value="Missões">Missões</option>
+            </select>
           </div>
 
           <div>
@@ -345,7 +377,7 @@
               id="input-soloist"
               type="text"
               list="datalist-soloists"
-              placeholder="Ex.: Ana, João"
+              placeholder="Ex.: Nick, Mary, Todos"
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
             <datalist id="datalist-soloists"></datalist>
@@ -456,52 +488,86 @@
     let confirmTargetSong = null;
     let successTimer = null;
 
-    // Estado da importação
     let parsedImportCandidates = [];
 
     const SMALL_LIST_THRESHOLD = 10;
     const STORAGE_URL_KEY = 'louvor_supabase_url';
     const STORAGE_ANON_KEY = 'louvor_supabase_anon_key';
+    const ALLOWED_STYLES = ['Adoração', 'Celebração', 'Missões'];
 
-    // Base heurística de classificação automática de Estilo
-    const ARTIST_STYLE_MAP = [
-      { keywords: ['diante do trono', 'ana paula valadao', 'gabriela rocha', 'aline barros', 'fernandinho', 'isaias saad', 'alessandro vilas boas', 'morada', 'fhop', 'florianopolis house of prayer', 'casa worship', 'droppa', 'juliano son', 'livres para adorar', 'nivea soares', 'helio', 'heloisa rosa', 'laura souguellis', 'marcus salles', 'gabriel guedes', 'andre aquino', 'israel salazar', 'mariana valadao', 'adhemar de campos', 'asaph borba', 'vineyard', 'hillsong', 'elevation worship', 'bethel music', 'jesus culture', 'maverick city', 'upperroom', 'phil wickham', 'chris tomlin', 'cody carnes', 'kari jobe', 'brooke ligertwood'], style: 'Adoração' },
-      { keywords: ['renascer praise', 'toque no altar', 'trazendo a arca', 'davi sacer', 'andre valadao', 'kleber lucas', 'soraya moraes', 'ludmila ferber', 'comunidade de nilopolis', 'comunidade internacional da zona sul', 'sara nossa terra', 'arena louvor', 'lagoinha', 'central 3', 'dunamis', 'som do reino', 'dropa'], style: 'Congregacional' },
-      { keywords: ['preto no branco', 'thalles roberto', 'anderson freire', 'bruna karla', 'cassiane', 'damares', 'midian lima', 'elaine martins', 'eyshila', 'shirley carvalhaes', 'lauriete', 'valesca mayssa', 'kemilly santos', 'gerson rufino', 'flordelis', 'delino marcal', 'lukas agustinho', 'leandro borges', 'sarah farias'], style: 'Pentecostal / Júbilo' },
-      { keywords: ['oficina g3', 'rosa de saron', 'resgate', 'rodolfo abrantes', 'palavrantiga', 'os arrais', 'projeto sola', 'purples', 'mauro henrique', 'leonardo goncalves', 'daniela araujo', 'priscilla alcantara', 'eli soares'], style: 'Contemporâneo' },
-      { keywords: ['harpa crista', 'cantor cristao', 'hinario', 'hino'], style: 'Clássico / Hino' }
+    // =========================================================================
+    // CLASSIFICAÇÃO AUTOMÁTICA NAS 3 CATEGORIAS: Missões | Celebração | Adoração
+    // =========================================================================
+    const MISSIONS_KEYWORDS = [
+      'missoes', 'missao', 'ide', 'eis-me aqui', 'eis me aqui', 'envia-me', 'envia me',
+      'nacoes', 'povos', 'tribos', 'linguas', 'seara', 'colheita', 'ceifeiros',
+      'evangelho', 'pregar', 'anunciar', 'brasil', 'terra', 'mundo inteiro', 'aviva',
+      'clamor pelas nacoes', 'coracao missionario', 'pescador', 'ide por todo mundo',
+      'ate que todos oucam', 'maranata', 'volta logo'
     ];
 
-    const TITLE_STYLE_KEYWORDS = [
-      { keywords: ['celebrai', 'alegria', 'festa', 'dancar', 'pular', 'jubilo', 'vitoria', 'vencedor', 'fogo', 'poder de deus', 'muralhas', 'cadeias'], style: 'Celebração' },
-      { keywords: ['santo', 'adoracao', 'adorar', 'rendido', 'prostrado', 'entrega', 'intimidade', 'lugar secreto', 'espirito santo', 'presenca', 'gloria', 'cordeiro', 'cruz', 'sangue', 'graca', 'misericordia'], style: 'Adoração' },
-      { keywords: ['harpa', 'hino', 'grandioso es tu', 'castelo forte', 'rude cruz', 'alvo mais que a neve', 'porque ele vive', 'sossegai'], style: 'Clássico / Hino' }
+    const CELEBRATION_KEYWORDS = [
+      'celebrai', 'celebrar', 'alegria', 'festa', 'dancar', 'danco', 'pular', 'jubilo',
+      'vitoria', 'vencedor', 'mais que vencedor', 'fogo', 'poder de deus', 'muralhas',
+      'cadeias', 'liberdade', 'livre', 'ressuscitou', 'vive', 'reina', 'exaltado',
+      'grande e o senhor', 'bom e louvar', 'quao grande', 'hosana', 'aleluia',
+      'quero subir', 'santo, santo, santo', 'aclame ao senhor', 'meu respirar',
+      'vem esta e a hora', 'o nosso general', 'leao da tribo de juda', 'maravilhoso',
+      'extraordinario', 'ninguem explica', 'o fogo ardera', 'deus de promessas',
+      'milagres', 'sobrenatural', 'tudo e possivel', 'rompendo em fe', 'restitui',
+      'faz chover', 'aguas purificadoras', 'em espirito em verdade', 'te agradeco',
+      'gratidao', 'louve', 'cante', 'glorifica', 'exalte', 'triunfo'
+    ];
+
+    const WORSHIP_KEYWORDS = [
+      'adoracao', 'adorar', 'adoro', 'rendido', 'prostrado', 'entrega', 'entrego',
+      'intimidade', 'lugar secreto', 'espirito santo', 'presenca', 'cordeiro',
+      'cruz', 'sangue', 'graca', 'misericordia', 'emaus', 'principe da paz',
+      'poder do teu amor', 'oceanos', 'em teus bracos', 'so tu es santo',
+      'quieto', 'acalma', 'abrigo', 'refugio', 'pai', 'abba', 'jesus',
+      'tu es fiel', 'santo espirito', 'vem habitar', 'purifica', 'sonda-me',
+      'sonda me', 'coracao igual ao teu', 'ninguem te ama como eu', 'ao unico',
+      'digno', 'majestade', 'sublime', 'eterno', 'confio', 'descanso', 'espero',
+      'nada alem do sangue', 'vem me buscar', 'yesha', 'yeshua', 'oh quao lindo'
+    ];
+
+    // Regras por artista quando o título sozinho não for conclusivo
+    const ARTIST_DEFAULT_STYLE = [
+      { keywords: ['renascer praise', 'thalles roberto', 'preto no branco', 'kleber lucas', 'andre valadao', 'cassiane', 'damares', 'eyshila', 'shirley carvalhaes', 'lauriete', 'bruna karla', 'midian lima', 'elaine martins', 'elias silva', 'gerson rufino'], style: 'Celebração' },
+      { keywords: ['morada', 'diante do trono', 'ana paula valadao', 'gabriela rocha', 'isaias saad', 'alessandro vilas boas', 'fhop', 'casa worship', 'juliano son', 'livres para adorar', 'nivea soares', 'heloisa rosa', 'laura souguellis', 'gabriel guedes', 'andre aquino', 'hillsong', 'bethel', 'elevation', 'upperroom', 'vineyard', 'asaph borba', 'adhemar de campos', 'ludmila ferber'], style: 'Adoração' }
     ];
 
     function inferSongStyle(title, artist) {
-      const normArtist = normalizeText(artist);
       const normTitle = normalizeText(title);
+      const normArtist = normalizeText(artist);
 
+      // 1. Prioridade máxima: temática de Missões
+      if (MISSIONS_KEYWORDS.some(kw => normTitle.includes(kw))) {
+        return 'Missões';
+      }
+
+      // 2. Palavras-chave de Celebração vs Adoração no título
+      const isCelebrationTitle = CELEBRATION_KEYWORDS.some(kw => normTitle.includes(kw));
+      const isWorshipTitle = WORSHIP_KEYWORDS.some(kw => normTitle.includes(kw));
+
+      if (isCelebrationTitle && !isWorshipTitle) return 'Celebração';
+      if (isWorshipTitle && !isCelebrationTitle) return 'Adoração';
+
+      // 3. Desempate ou inferência pelo perfil predominante do Cantor/Grupo
       if (normArtist) {
-        for (const entry of ARTIST_STYLE_MAP) {
+        for (const entry of ARTIST_DEFAULT_STYLE) {
           if (entry.keywords.some(kw => normArtist.includes(kw))) {
             return entry.style;
           }
         }
       }
 
-      if (normTitle) {
-        for (const entry of TITLE_STYLE_KEYWORDS) {
-          if (entry.keywords.some(kw => normTitle.includes(kw))) {
-            return entry.style;
-          }
-        }
-      }
+      if (isCelebrationTitle) return 'Celebração';
+      if (isWorshipTitle) return 'Adoração';
 
-      return ''; // Deixa em branco se não houver correspondência confiável
+      return ''; // Deixa em branco se não houver segurança para classificar
     }
 
-    // Inicialização
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       setupEvents();
@@ -536,6 +602,11 @@
         renderSongs();
       });
 
+      document.getElementById('filter-style').addEventListener('change', (e) => {
+        filterStyle = e.target.value;
+        renderSongs();
+      });
+
       document.getElementById('input-title').addEventListener('input', hideDuplicateBox);
       document.getElementById('input-artist').addEventListener('input', hideDuplicateBox);
 
@@ -557,7 +628,6 @@
         initSupabase();
       });
 
-      // Atalho de teclado: letra N para nova música (Esc fecha modais)
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           closeSongModal();
@@ -634,6 +704,18 @@
       return div.innerHTML;
     }
 
+    function getStyleBadgeHtml(style) {
+      if (!style) return '<span class="text-slate-400 italic">—</span>';
+      const norm = normalizeText(style);
+      if (norm === 'celebracao') {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/70">${escapeHtml(style)}</span>`;
+      }
+      if (norm === 'missoes') {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">${escapeHtml(style)}</span>`;
+      }
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/70">${escapeHtml(style)}</span>`;
+    }
+
     function showSuccess(msg) {
       const el = document.getElementById('alert-success');
       document.getElementById('alert-success-text').textContent = msg;
@@ -689,6 +771,7 @@
       document.getElementById('import-parsing-state').classList.add('hidden');
       document.getElementById('import-error').classList.add('hidden');
       document.getElementById('import-preview-section').classList.add('hidden');
+      document.getElementById('ai-classify-box').classList.add('hidden');
       document.getElementById('import-selected-count').textContent = 'Nenhum arquivo selecionado';
       document.getElementById('btn-confirm-import').disabled = true;
       document.getElementById('btn-confirm-import-text').textContent = 'Importar músicas';
@@ -711,9 +794,9 @@
 
         if (titleIdx === -1 && (h === 'nome' || h.includes('musica') || h.includes('titulo') || h.includes('cancao'))) {
           titleIdx = idx;
-        } else if (artistIdx === -1 && (h.includes('cantor') || h.includes('grupo') || h.includes('artista') || h.includes('banda') || h.includes('interprete'))) {
+        } else if (artistIdx === -1 && (h.includes('autor') || h.includes('cantor') || h.includes('grupo') || h.includes('artista') || h.includes('banda') || h.includes('interprete'))) {
           artistIdx = idx;
-        } else if (soloistIdx === -1 && (h.includes('solista') || h.includes('ministro') || h.includes('vocal'))) {
+        } else if (soloistIdx === -1 && (h === 'solo' || h.includes('solista') || h.includes('ministro') || h.includes('vocal'))) {
           soloistIdx = idx;
         }
       });
@@ -732,8 +815,7 @@
         let headerRowIdx = -1;
         let colMap = { titleIdx: -1, artistIdx: -1, soloistIdx: -1 };
 
-        // Procura a linha de cabeçalho nas primeiras 15 linhas da aba
-        const maxHeaderScan = Math.min(rows.length, 15);
+        const maxHeaderScan = Math.min(rows.length, 20);
         for (let r = 0; r < maxHeaderScan; r++) {
           const detected = detectColumnIndexes(rows[r]);
           if (detected.titleIdx !== -1) {
@@ -743,7 +825,7 @@
           }
         }
 
-        // Fallback caso a planilha não tenha cabeçalho explícito, assumindo ordem: Nome | Cantor/Grupo | Solista
+        // Fallback caso a planilha não tenha cabeçalho explícito: NOME | AUTOR | SOLO
         if (headerRowIdx === -1) {
           headerRowIdx = -1;
           colMap = { titleIdx: 0, artistIdx: 1, soloistIdx: 2 };
@@ -759,9 +841,9 @@
 
           if (!rawTitle) continue;
 
-          // Ignora linhas que sejam repetição do cabeçalho no meio da planilha
+          // Ignora linhas repetidas de cabeçalho no meio do arquivo
           const normTitle = normalizeText(rawTitle);
-          if (['nome', 'musica', 'titulo', 'nome da musica'].includes(normTitle)) continue;
+          if (['nome', 'musica', 'titulo', 'nome da musica', 'data', 'domingo', 'culto'].includes(normTitle)) continue;
 
           extracted.push({
             title: rawTitle,
@@ -825,7 +907,6 @@
           return;
         }
 
-        // Remove duplicadas internas (entre os 20 cronogramas) e músicas que já existem no Supabase
         const existingKeys = new Set(
           songs.map(s => `${normalizeText(s.title)}|${normalizeText(s.artist)}`)
         );
@@ -841,14 +922,12 @@
           const normArtist = normalizeText(item.artist);
           const compositeKey = `${normTitle}|${normArtist}`;
 
-          // Se já existe exatamente igual no banco ou com mesmo título quando não há artista
           if (existingKeys.has(compositeKey) || (!normArtist && existingTitlesWithoutArtist.has(normTitle))) {
             duplicatesSkipped++;
             continue;
           }
 
           if (uniqueMap.has(compositeKey)) {
-            // Se a ocorrência anterior não tinha solista e esta tem, aproveita o solista
             const existingCandidate = uniqueMap.get(compositeKey);
             if (!existingCandidate.soloist && item.soloist) {
               existingCandidate.soloist = item.soloist;
@@ -868,20 +947,7 @@
 
         parsedImportCandidates = sortSongsAlphabetically(Array.from(uniqueMap.values()));
 
-        const summaryBanner = document.getElementById('import-summary-banner');
-        const autoStyledCount = parsedImportCandidates.filter(c => Boolean(c.style)).length;
-
-        summaryBanner.innerHTML = `
-          <div>
-            <strong>${filesProcessedCount}</strong> ${filesProcessedCount === 1 ? 'planilha lida' : 'planilhas lidas'} •
-            <strong>${parsedImportCandidates.length}</strong> ${parsedImportCandidates.length === 1 ? 'música nova encontrada' : 'músicas novas encontradas'}
-            ${duplicatesSkipped > 0 ? `(${duplicatesSkipped} repetidas ignoradas)` : ''}
-          </div>
-          <div class="text-indigo-700">
-            Estilo identificado automaticamente em <strong>${autoStyledCount}</strong> de ${parsedImportCandidates.length}
-          </div>
-        `;
-
+        updateImportSummaryBanner(filesProcessedCount, duplicatesSkipped);
         previewEl.classList.remove('hidden');
         document.getElementById('import-select-all').checked = true;
         renderImportPreviewTable();
@@ -889,6 +955,108 @@
         parsingEl.classList.add('hidden');
         errorEl.textContent = 'Não foi possível ler o arquivo. Verifique se o .zip ou as planilhas não estão corrompidos.';
         errorEl.classList.remove('hidden');
+      }
+    }
+
+    function updateImportSummaryBanner(filesProcessedCount, duplicatesSkipped) {
+      const summaryBanner = document.getElementById('import-summary-banner');
+      const autoStyledCount = parsedImportCandidates.filter(c => Boolean(c.style)).length;
+      const blankStyleCount = parsedImportCandidates.length - autoStyledCount;
+
+      summaryBanner.innerHTML = `
+        <div>
+          <strong>${filesProcessedCount}</strong> ${filesProcessedCount === 1 ? 'planilha lida' : 'planilhas lidas'} •
+          <strong>${parsedImportCandidates.length}</strong> ${parsedImportCandidates.length === 1 ? 'música nova encontrada' : 'músicas novas encontradas'}
+          ${duplicatesSkipped > 0 ? `(${duplicatesSkipped} repetidas ignoradas)` : ''}
+        </div>
+        <div class="text-indigo-700">
+          Estilo identificado em <strong>${autoStyledCount}</strong> • Em branco: <strong>${blankStyleCount}</strong>
+        </div>
+      `;
+
+      document.getElementById('ai-classify-box').classList.toggle('hidden', blankStyleCount === 0);
+      lucide.createIcons();
+    }
+
+    async function classifyRemainingWithAI() {
+      const apiKey = document.getElementById('gemini-api-key-input').value.trim();
+      const errorEl = document.getElementById('import-error');
+      const btn = document.getElementById('btn-ai-classify');
+
+      errorEl.classList.add('hidden');
+
+      if (!apiKey) {
+        errorEl.textContent = 'Cole sua Gemini API Key antes de clicar em Classificar.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      const unclassified = parsedImportCandidates
+        .map((item, idx) => ({ idx, title: item.title, artist: item.artist }))
+        .filter((_, idx) => !parsedImportCandidates[idx].style);
+
+      if (unclassified.length === 0) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>Analisando...</span>';
+
+      const prompt = `Classifique cada música gospel/cristã brasileira abaixo em APENAS UMA destas três categorias exatas:
+- "Celebração" (músicas animadas, rápidas, festivas, de júbilo ou vitória)
+- "Adoração" (músicas mais tranquilas, lentas, congregacionais de entrega, intimidade ou louvor suave)
+- "Missões" (músicas com temática de evangelismo, envio, povos, nações, colheita ou clamor pelo mundo)
+
+Se você não conhecer a música com segurança, retorne "" (string vazia).
+Responda SOMENTE com um array JSON válido no formato [{"idx": 0, "style": "Adoração"}], sem markdown ou texto extra.
+
+Músicas:
+${JSON.stringify(unclassified)}`;
+
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.1 }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Falha na API do Gemini. Verifique se a chave está correta.');
+        }
+
+        const result = await response.json();
+        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const cleanedJson = rawText.replace(/```json|```/gi, '').trim();
+        const classifications = JSON.parse(cleanedJson);
+
+        let updatedCount = 0;
+        if (Array.isArray(classifications)) {
+          classifications.forEach(entry => {
+            const target = parsedImportCandidates[entry.idx];
+            if (target && ALLOWED_STYLES.includes(entry.style)) {
+              target.style = entry.style;
+              updatedCount++;
+            }
+          });
+        }
+
+        renderImportPreviewTable();
+        const autoStyledCount = parsedImportCandidates.filter(c => Boolean(c.style)).length;
+        const blankStyleCount = parsedImportCandidates.length - autoStyledCount;
+        document.getElementById('import-summary-banner').lastElementChild.innerHTML =
+          `Estilo identificado em <strong>${autoStyledCount}</strong> (+${updatedCount} pela IA) • Em branco: <strong>${blankStyleCount}</strong>`;
+        document.getElementById('ai-classify-box').classList.toggle('hidden', blankStyleCount === 0);
+      } catch (err) {
+        errorEl.textContent = err.message || 'Erro ao classificar com IA.';
+        errorEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Classificar</span>';
+        lucide.createIcons();
       }
     }
 
@@ -922,13 +1090,15 @@
           <td class="py-2 px-3 font-medium text-slate-900">${escapeHtml(item.title)}</td>
           <td class="py-2 px-3 text-slate-600">${item.artist ? escapeHtml(item.artist) : '<span class="text-slate-400">—</span>'}</td>
           <td class="py-2 px-3">
-            <input
-              type="text"
-              value="${escapeHtml(item.style)}"
-              placeholder="Em branco"
+            <select
               onchange="updateImportRowStyle(${index}, this.value)"
-              class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
-            />
+              class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="" ${!item.style ? 'selected' : ''}>Em branco</option>
+              <option value="Adoração" ${item.style === 'Adoração' ? 'selected' : ''}>Adoração</option>
+              <option value="Celebração" ${item.style === 'Celebração' ? 'selected' : ''}>Celebração</option>
+              <option value="Missões" ${item.style === 'Missões' ? 'selected' : ''}>Missões</option>
+            </select>
           </td>
           <td class="py-2 px-3 text-slate-600">${item.soloist ? escapeHtml(item.soloist) : '<span class="text-slate-400">—</span>'}</td>
         </tr>
@@ -1085,23 +1255,8 @@
     }
 
     function updateFilterControlsAndDatalists() {
-      const styles = getUniqueValues('style');
       const soloists = getUniqueValues('soloist');
       const artists = getUniqueValues('artist');
-
-      renderAdaptiveFilter({
-        containerId: 'filter-style-container',
-        inputId: 'filter-style',
-        datalistId: 'filter-style-list',
-        options: styles,
-        currentValue: filterStyle,
-        placeholderAll: 'Todos os estilos',
-        preferSearchable: false,
-        onChangeCallback: (val) => {
-          filterStyle = val;
-          renderSongs();
-        },
-      });
 
       renderAdaptiveFilter({
         containerId: 'filter-soloist-container',
@@ -1135,10 +1290,6 @@
         .map(v => `<option value="${escapeHtml(v)}"></option>`)
         .join('');
 
-      document.getElementById('datalist-styles').innerHTML = getAllUniqueValues('style')
-        .map(v => `<option value="${escapeHtml(v)}"></option>`)
-        .join('');
-
       document.getElementById('datalist-soloists').innerHTML = getAllUniqueValues('soloist')
         .map(v => `<option value="${escapeHtml(v)}"></option>`)
         .join('');
@@ -1152,6 +1303,7 @@
       filterSoloist = '';
       filterArtist = '';
       document.getElementById('search-input').value = '';
+      document.getElementById('filter-style').value = '';
       document.getElementById('btn-clear-search').classList.add('hidden');
       updateFilterControlsAndDatalists();
       renderSongs();
@@ -1190,7 +1342,6 @@
       document.getElementById('tab-archived').textContent = `Arquivadas (${archivedCount})`;
 
       const qSearch = normalizeText(searchTerm);
-      const qStyle = normalizeText(filterStyle);
       const qSoloist = normalizeText(filterSoloist);
       const qArtist = normalizeText(filterArtist);
 
@@ -1198,7 +1349,12 @@
         songs.filter(song => {
           if (song.status !== viewStatus) return false;
 
-          if (qStyle && !normalizeText(song.style).includes(qStyle)) return false;
+          if (filterStyle === '__EMPTY__') {
+            if ((song.style || '').trim() !== '') return false;
+          } else if (filterStyle) {
+            if (normalizeText(song.style) !== normalizeText(filterStyle)) return false;
+          }
+
           if (qSoloist && !normalizeText(song.soloist).includes(qSoloist)) return false;
           if (qArtist && !normalizeText(song.artist).includes(qArtist)) return false;
 
@@ -1248,9 +1404,7 @@
             ${song.artist ? escapeHtml(song.artist) : '<span class="text-slate-400 italic">—</span>'}
           </td>
           <td class="py-3.5 px-4 text-slate-600">
-            ${song.style
-              ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">${escapeHtml(song.style)}</span>`
-              : '<span class="text-slate-400 italic">—</span>'}
+            ${getStyleBadgeHtml(song.style)}
           </td>
           <td class="py-3.5 px-4 text-slate-600">
             ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
@@ -1352,7 +1506,7 @@
         document.getElementById('btn-save-text').textContent = 'Salvar alterações';
         document.getElementById('input-title').value = song.title;
         document.getElementById('input-artist').value = song.artist || '';
-        document.getElementById('input-style').value = song.style || '';
+        document.getElementById('input-style').value = ALLOWED_STYLES.includes(song.style) ? song.style : '';
         document.getElementById('input-soloist').value = song.soloist || '';
       } else {
         document.getElementById('modal-song-title').textContent = 'Nova música';
