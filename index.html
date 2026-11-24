@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biblioteca do Louvor</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS SDK via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Ícones Lucide via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col">
+
+  <!-- Cabeçalho -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+          <i data-lucide="music" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold text-slate-900 leading-tight">Biblioteca do Louvor</h1>
+          <p class="text-xs text-slate-500">Catálogo de músicas do ministério</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-open-config"
+          type="button"
+          title="Configurar conexão Supabase"
+          class="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+        >
+          <i data-lucide="settings" class="w-4 h-4"></i>
+        </button>
+
+        <button
+          id="btn-new-song"
+          type="button"
+          class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-medium px-3.5 py-2.5 rounded-lg shadow-sm transition"
+        >
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Nova música</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 space-y-5">
+
+    <!-- Aviso de Sucesso -->
+    <div id="alert-success" class="hidden flex items-center justify-between gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
+      <div class="flex items-center gap-2">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+        <span id="alert-success-text"></span>
+      </div>
+      <button type="button" onclick="hideSuccess()" class="text-emerald-600 hover:text-emerald-800 p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Aviso de Erro -->
+    <div id="alert-error" class="hidden flex items-center justify-between gap-2 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+      <span id="alert-error-text"></span>
+      <button type="button" onclick="fetchSongs()" class="underline font-medium shrink-0">Tentar novamente</button>
+    </div>
+
+    <!-- Busca e Abas -->
+    <div class="space-y-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Buscar por nome da música ou cantor/grupo..."
+          class="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-9 py-2.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+        <button
+          id="btn-clear-search"
+          type="button"
+          class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+          aria-label="Limpar busca"
+        >
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center border-b border-slate-200 gap-4">
+        <button
+          id="tab-active"
+          type="button"
+          onclick="setViewStatus('active')"
+          class="pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition"
+        >
+          Ativas (0)
+        </button>
+        <button
+          id="tab-archived"
+          type="button"
+          onclick="setViewStatus('archived')"
+          class="pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition"
+        >
+          Arquivadas (0)
+        </button>
+      </div>
+    </div>
+
+    <!-- Estado de Carregamento -->
+    <div id="loading-state" class="py-16 flex flex-col items-center justify-center text-slate-500 gap-2">
+      <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-sm">Carregando biblioteca...</span>
+    </div>
+
+    <!-- Estado Vazio / Sem Resultados -->
+    <div id="empty-state" class="hidden bg-white border border-slate-200 rounded-xl p-8 text-center space-y-3">
+      <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+        <i data-lucide="music" class="w-5 h-5"></i>
+      </div>
+      <h2 id="empty-title" class="text-base font-medium text-slate-900"></h2>
+      <p id="empty-desc" class="text-sm text-slate-500 max-w-sm mx-auto"></p>
+      <div id="empty-action-wrapper" class="pt-1"></div>
+    </div>
+
+    <!-- Lista de Músicas -->
+    <ul id="songs-list" class="hidden bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm"></ul>
+  </main>
+
+  <!-- Modal: Cadastro / Edição de Música -->
+  <div id="modal-song" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 id="modal-song-title" class="text-base font-semibold text-slate-900">Nova música</h2>
+        <button type="button" onclick="closeSongModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="song-form" class="space-y-4">
+        <div>
+          <label for="input-title" class="block text-sm font-medium text-slate-700 mb-1">
+            Nome da música <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="input-title"
+            type="text"
+            placeholder="Ex.: Lugar Secreto"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label for="input-artist" class="block text-sm font-medium text-slate-700 mb-1">
+            Cantor ou grupo <span class="text-slate-400 font-normal">(opcional)</span>
+          </label>
+          <input
+            id="input-artist"
+            type="text"
+            placeholder="Ex.: Gabriela Rocha"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+
+        <p id="form-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></p>
+
+        <!-- Alerta de Duplicidade (RN-003) -->
+        <div id="duplicate-box" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2 text-sm text-amber-900">
+          <div class="flex items-start gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+            <div>
+              <p class="font-medium">Música parecida já cadastrada</p>
+              <p id="duplicate-text" class="text-xs text-amber-800 mt-0.5"></p>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="button" onclick="hideDuplicateBox()" class="px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 rounded-md">
+              Revisar
+            </button>
+            <button type="button" onclick="submitSong(true)" class="px-3 py-1.5 text-xs font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-md">
+              Salvar mesmo assim
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="closeSongModal()" class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">
+            Cancelar
+          </button>
+          <button id="btn-save-song" type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg transition">
+            <span id="btn-save-text">Cadastrar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmação de Arquivar / Restaurar -->
+  <div id="modal-confirm" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
+      <h2 id="confirm-title" class="text-base font-semibold text-slate-900"></h2>
+      <p id="confirm-desc" class="text-sm text-slate-600"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">
+          Cancelar
+        </button>
+        <button id="btn-confirm-action" type="button" class="px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Configuração do Supabase (salva no navegador) -->
+  <div id="modal-config" class="hidden fixed inset-0 z-30 bg-slate-900/60 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold text-slate-900">Conectar ao Supabase</h2>
+        <button id="btn-close-config" type="button" onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500">
+        Cole as credenciais do seu projeto (<strong>Project Settings > API</strong>). Elas ficam salvas apenas neste navegador.
+      </p>
+      <form id="config-form" class="space-y-3">
+        <div>
+          <label for="cfg-url" class="block text-xs font-medium text-slate-700 mb-1">Project URL</label>
+          <input
+            id="cfg-url"
+            type="url"
+            required
+            placeholder="https://xyzcompany.supabase.co"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label for="cfg-key" class="block text-xs font-medium text-slate-700 mb-1">Anon Public Key</label>
+          <input
+            id="cfg-key"
+            type="text"
+            required
+            placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="submit" class="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+            Salvar e Conectar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Estado global
+    let supabaseClient = null;
+    let songs = [];
+    let viewStatus = 'active';
+    let searchTerm = '';
+    let editingSongId = null;
+    let confirmTargetSong = null;
+    let successTimer = null;
+
+    const STORAGE_URL_KEY = 'louvor_supabase_url';
+    const STORAGE_ANON_KEY = 'louvor_supabase_anon_key';
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      setupEvents();
+      initSupabase();
+    });
+
+    function setupEvents() {
+      document.getElementById('btn-new-song').addEventListener('click', () => openSongModal());
+      document.getElementById('btn-open-config').addEventListener('click', () => openConfigModal(true));
+
+      const searchInput = document.getElementById('search-input');
+      const clearBtn = document.getElementById('btn-clear-search');
+
+      searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        clearBtn.classList.toggle('hidden', !searchTerm);
+        renderSongs();
+      });
+
+      clearBtn.addEventListener('click', () => {
+        searchTerm = '';
+        searchInput.value = '';
+        clearBtn.classList.add('hidden');
+        renderSongs();
+      });
+
+      document.getElementById('input-title').addEventListener('input', hideDuplicateBox);
+      document.getElementById('input-artist').addEventListener('input', hideDuplicateBox);
+
+      document.getElementById('song-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitSong(false);
+      });
+
+      document.getElementById('btn-confirm-action').addEventListener('click', executeToggleArchive);
+
+      document.getElementById('config-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const url = document.getElementById('cfg-url').value.trim();
+        const key = document.getElementById('cfg-key').value.trim();
+        if (!url || !key) return;
+        localStorage.setItem(STORAGE_URL_KEY, url);
+        localStorage.setItem(STORAGE_ANON_KEY, key);
+        closeConfigModal();
+        initSupabase();
+      });
+    }
+
+    function initSupabase() {
+      const url = localStorage.getItem(STORAGE_URL_KEY);
+      const key = localStorage.getItem(STORAGE_ANON_KEY);
+
+      if (!url || !key) {
+        document.getElementById('loading-state').classList.add('hidden');
+        openConfigModal(false);
+        return;
+      }
+
+      supabaseClient = window.supabase.createClient(url, key);
+      fetchSongs();
+    }
+
+    function openConfigModal(allowClose) {
+      document.getElementById('cfg-url').value = localStorage.getItem(STORAGE_URL_KEY) || '';
+      document.getElementById('cfg-key').value = localStorage.getItem(STORAGE_ANON_KEY) || '';
+      document.getElementById('btn-close-config').classList.toggle('hidden', !allowClose);
+      document.getElementById('modal-config').classList.remove('hidden');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('modal-config').classList.add('hidden');
+    }
+
+    function normalizeText(value) {
+      return (value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('alert-success');
+      document.getElementById('alert-success-text').textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(successTimer);
+      successTimer = setTimeout(hideSuccess, 4000);
+    }
+
+    function hideSuccess() {
+      document.getElementById('alert-success').classList.add('hidden');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('alert-error');
+      document.getElementById('alert-error-text').textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('alert-error').classList.add('hidden');
+    }
+
+    async function fetchSongs() {
+      if (!supabaseClient) return;
+      hideError();
+      document.getElementById('loading-state').classList.remove('hidden');
+      document.getElementById('songs-list').classList.add('hidden');
+      document.getElementById('empty-state').classList.add('hidden');
+
+      const { data, error } = await supabaseClient
+        .from('songs')
+        .select('id, title, artist, status, created_at, updated_at')
+        .order('title', { ascending: true });
+
+      document.getElementById('loading-state').classList.add('hidden');
+
+      if (error) {
+        showError('Erro ao conectar com o Supabase. Verifique a URL, a Key e se a tabela "songs" foi criada.');
+        return;
+      }
+
+      songs = data || [];
+      renderSongs();
+    }
+
+    function setViewStatus(status) {
+      viewStatus = status;
+      const tabActive = document.getElementById('tab-active');
+      const tabArchived = document.getElementById('tab-archived');
+
+      if (status === 'active') {
+        tabActive.className = 'pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition';
+        tabArchived.className = 'pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition';
+      } else {
+        tabArchived.className = 'pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition';
+        tabActive.className = 'pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition';
+      }
+      renderSongs();
+    }
+
+    function renderSongs() {
+      const activeCount = songs.filter(s => s.status === 'active').length;
+      const archivedCount = songs.filter(s => s.status === 'archived').length;
+
+      document.getElementById('tab-active').textContent = `Ativas (${activeCount})`;
+      document.getElementById('tab-archived').textContent = `Arquivadas (${archivedCount})`;
+
+      const query = normalizeText(searchTerm);
+      const filtered = songs.filter(song => {
+        if (song.status !== viewStatus) return false;
+        if (!query) return true;
+        return (
+          normalizeText(song.title).includes(query) ||
+          normalizeText(song.artist).includes(query)
+        );
+      });
+
+      const listEl = document.getElementById('songs-list');
+      const emptyEl = document.getElementById('empty-state');
+
+      if (filtered.length === 0) {
+        listEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        renderEmptyState();
+        lucide.createIcons();
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      listEl.classList.remove('hidden');
+
+      listEl.innerHTML = filtered.map(song => `
+        <li class="px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-slate-900 truncate">${escapeHtml(song.title)}</p>
+            <p class="text-xs text-slate-500 truncate mt-0.5">
+              ${song.artist ? escapeHtml(song.artist) : 'Cantor/grupo não informado'}
+            </p>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onclick="openSongModal('${song.id}')"
+              title="Editar música"
+              class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+            >
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+            </button>
+            <button
+              type="button"
+              onclick="openConfirmModal('${song.id}')"
+              title="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
+              class="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+            >
+              <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </li>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function renderEmptyState() {
+      const titleEl = document.getElementById('empty-title');
+      const descEl = document.getElementById('empty-desc');
+      const actionEl = document.getElementById('empty-action-wrapper');
+      actionEl.innerHTML = '';
+
+      if (searchTerm.trim()) {
+        titleEl.textContent = 'Nenhuma música encontrada';
+        descEl.textContent = `Não encontramos resultados para "${searchTerm.trim()}" nas músicas ${viewStatus === 'active' ? 'ativas' : 'arquivadas'}.`;
+        if (viewStatus === 'active') {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700';
+          btn.innerHTML = `<i data-lucide="plus" class="w-4 h-4"></i><span>Cadastrar "${escapeHtml(searchTerm.trim())}" agora</span>`;
+          btn.onclick = () => openSongModal(null, searchTerm.trim());
+          actionEl.appendChild(btn);
+        }
+      } else if (viewStatus === 'active') {
+        titleEl.textContent = 'Sua biblioteca ainda está vazia';
+        descEl.textContent = 'Comece cadastrando as músicas que o grupo costuma cantar nos cultos.';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition';
+        btn.innerHTML = `<i data-lucide="plus" class="w-4 h-4"></i><span>Cadastrar primeira música</span>`;
+        btn.onclick = () => openSongModal();
+        actionEl.appendChild(btn);
+      } else {
+        titleEl.textContent = 'Nenhuma música arquivada';
+        descEl.textContent = 'Músicas arquivadas continuam preservadas no histórico e aparecem aqui.';
+      }
+    }
+
+    function openSongModal(songId = null, prefillTitle = '') {
+      editingSongId = songId;
+      const formErr = document.getElementById('form-error');
+      formErr.classList.add('hidden');
+      hideDuplicateBox();
+
+      if (songId) {
+        const song = songs.find(s => s.id === songId);
+        if (!song) return;
+        document.getElementById('modal-song-title').textContent = 'Editar música';
+        document.getElementById('btn-save-text').textContent = 'Salvar alterações';
+        document.getElementById('input-title').value = song.title;
+        document.getElementById('input-artist').value = song.artist || '';
+      } else {
+        document.getElementById('modal-song-title').textContent = 'Nova música';
+        document.getElementById('btn-save-text').textContent = 'Cadastrar';
+        document.getElementById('input-title').value = prefillTitle;
+        document.getElementById('input-artist').value = '';
+      }
+
+      document.getElementById('modal-song').classList.remove('hidden');
+      document.getElementById('input-title').focus();
+    }
+
+    function closeSongModal() {
+      document.getElementById('modal-song').classList.add('hidden');
+      editingSongId = null;
+    }
+
+    function hideDuplicateBox() {
+      document.getElementById('duplicate-box').classList.add('hidden');
+    }
+
+    function findDuplicate(cleanTitle, cleanArtist) {
+      const normTitle = normalizeText(cleanTitle);
+      const normArtist = normalizeText(cleanArtist);
+
+      return songs.find(s => {
+        if (editingSongId && s.id === editingSongId) return false;
+        if (normalizeText(s.title) !== normTitle) return false;
+        if (!normArtist) return true;
+        const existingArtist = normalizeText(s.artist);
+        return !existingArtist || existingArtist === normArtist;
+      }) || null;
+    }
+
+    async function submitSong(ignoreDuplicate) {
+      const formErr = document.getElementById('form-error');
+      formErr.classList.add('hidden');
+
+      const cleanTitle = document.getElementById('input-title').value.trim();
+      const cleanArtist = document.getElementById('input-artist').value.trim();
+
+      if (!cleanTitle) {
+        formErr.textContent = 'O nome da música é obrigatório.';
+        formErr.classList.remove('hidden');
+        return;
+      }
+
+      if (!ignoreDuplicate) {
+        const dup = findDuplicate(cleanTitle, cleanArtist);
+        if (dup) {
+          const dupText = document.getElementById('duplicate-text');
+          dupText.textContent = `Já existe "${dup.title}"${dup.artist ? ` (${dup.artist})` : ''}${dup.status === 'archived' ? ' [Arquivada]' : ''}. Deseja salvar mesmo assim?`;
+          document.getElementById('duplicate-box').classList.remove('hidden');
+          lucide.createIcons();
+          return;
+        }
+      }
+
+      const saveBtn = document.getElementById('btn-save-song');
+      saveBtn.disabled = true;
+
+      if (editingSongId) {
+        const { data, error } = await supabaseClient
+          .from('songs')
+          .update({ title: cleanTitle, artist: cleanArtist || null })
+          .eq('id', editingSongId)
+          .select('id, title, artist, status, created_at, updated_at')
+          .single();
+
+        saveBtn.disabled = false;
+
+        if (error) {
+          formErr.textContent = 'Erro ao atualizar a música. Tente novamente.';
+          formErr.classList.remove('hidden');
+          return;
+        }
+
+        songs = songs
+          .map(s => (s.id === editingSongId ? data : s))
+          .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+
+        showSuccess(`Música "${cleanTitle}" atualizada.`);
+        closeSongModal();
+        renderSongs();
+      } else {
+        const { data, error } = await supabaseClient
+          .from('songs')
+          .insert({ title: cleanTitle, artist: cleanArtist || null, status: 'active' })
+          .select('id, title, artist, status, created_at, updated_at')
+          .single();
+
+        saveBtn.disabled = false;
+
+        if (error) {
+          formErr.textContent = 'Erro ao cadastrar a música. Tente novamente.';
+          formErr.classList.remove('hidden');
+          return;
+        }
+
+        songs = [...songs, data].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+        setViewStatus('active');
+        showSuccess(`Música "${cleanTitle}" adicionada à biblioteca.`);
+        closeSongModal();
+      }
+    }
+
+    function openConfirmModal(songId) {
+      const song = songs.find(s => s.id === songId);
+      if (!song) return;
+      confirmTargetSong = song;
+
+      const isArchiving = song.status === 'active';
+      document.getElementById('confirm-title').textContent = isArchiving ? 'Arquivar música?' : 'Restaurar música?';
+      document.getElementById('confirm-desc').textContent = isArchiving
+        ? `A música "${song.title}" sairá da lista principal, mas continuará salva no histórico e poderá ser restaurada quando quiser.`
+        : `A música "${song.title}" voltará a aparecer na lista principal da biblioteca.`;
+
+      const confirmBtn = document.getElementById('btn-confirm-action');
+      confirmBtn.textContent = isArchiving ? 'Arquivar' : 'Restaurar';
+      document.getElementById('modal-confirm').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('modal-confirm').classList.add('hidden');
+      confirmTargetSong = null;
+    }
+
+    async function executeToggleArchive() {
+      if (!confirmTargetSong) return;
+      const target = confirmTargetSong;
+      const nextStatus = target.status === 'active' ? 'archived' : 'active';
+      const confirmBtn = document.getElementById('btn-confirm-action');
+      confirmBtn.disabled = true;
+
+      const { data, error } = await supabaseClient
+        .from('songs')
+        .update({ status: nextStatus })
+        .eq('id', target.id)
+        .select('id, title, artist, status, created_at, updated_at')
+        .single();
+
+      confirmBtn.disabled = false;
+      closeConfirmModal();
+
+      if (error) {
+        showError('Não foi possível alterar o status da música.');
+        return;
+      }
+
+      songs = songs.map(s => (s.id === target.id ? data : s));
+      showSuccess(
+        nextStatus === 'archived'
+          ? `"${target.title}" foi arquivada.`
+          : `"${target.title}" foi restaurada para a biblioteca.`
+      );
+      renderSongs();
+    }
+  </script>
+</body>
+</html>
