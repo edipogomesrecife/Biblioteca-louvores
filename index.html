@@ -476,6 +476,12 @@
   </div>
 
   <script>
+    // =========================================================================
+    // COLE AQUI A SUA PROJECT URL E A SUA ANON PUBLIC KEY DO SUPABASE
+    // =========================================================================
+    const DEFAULT_SUPABASE_URL = 'https://sqxgwgoyrpvtvmdjfdxb.supabase.co';
+    const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxeGd3Z295cnB2dHZtZGpmZHhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU1MTkwOTMsImV4cCI6MjExMTA5NTA5M30.gGMSFKkOKGAUKxr7PQlb1Pr8Vj-h9pHB1NNtcTlcTzE';
+
     // Estado global
     let supabaseClient = null;
     let songs = [];
@@ -658,10 +664,10 @@
     }
 
     function initSupabase() {
-      const url = localStorage.getItem(STORAGE_URL_KEY);
-      const key = localStorage.getItem(STORAGE_ANON_KEY);
+      const url = localStorage.getItem(STORAGE_URL_KEY) || DEFAULT_SUPABASE_URL;
+      const key = localStorage.getItem(STORAGE_ANON_KEY) || DEFAULT_SUPABASE_ANON_KEY;
 
-      if (!url || !key) {
+      if (!url || !key || url.includes('COLE_SUA_') || key.includes('COLE_SUA_')) {
         document.getElementById('loading-state').classList.add('hidden');
         openConfigModal(false);
         return;
@@ -672,8 +678,10 @@
     }
 
     function openConfigModal(allowClose) {
-      document.getElementById('cfg-url').value = localStorage.getItem(STORAGE_URL_KEY) || '';
-      document.getElementById('cfg-key').value = localStorage.getItem(STORAGE_ANON_KEY) || '';
+      const savedUrl = localStorage.getItem(STORAGE_URL_KEY);
+      const savedKey = localStorage.getItem(STORAGE_ANON_KEY);
+      document.getElementById('cfg-url').value = savedUrl || (DEFAULT_SUPABASE_URL.includes('COLE_SUA_') ? '' : DEFAULT_SUPABASE_URL);
+      document.getElementById('cfg-key').value = savedKey || (DEFAULT_SUPABASE_ANON_KEY.includes('COLE_SUA_') ? '' : DEFAULT_SUPABASE_ANON_KEY);
       document.getElementById('btn-close-config').classList.toggle('hidden', !allowClose);
       document.getElementById('modal-config').classList.remove('hidden');
     }
