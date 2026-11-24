@@ -15,7 +15,7 @@
 
   <!-- Cabeçalho -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
-    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
           <i data-lucide="music" class="w-5 h-5"></i>
@@ -39,17 +39,21 @@
         <button
           id="btn-new-song"
           type="button"
+          title="Adicionar nova música (Atalho: N)"
           class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-medium px-3.5 py-2.5 rounded-lg shadow-sm transition"
         >
           <i data-lucide="plus" class="w-4 h-4"></i>
           <span>Nova música</span>
+          <kbd class="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-500/80 text-indigo-100 rounded border border-indigo-400/40">
+            N
+          </kbd>
         </button>
       </div>
     </div>
   </header>
 
   <!-- Conteúdo Principal -->
-  <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 space-y-5">
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-5">
 
     <!-- Aviso de Sucesso -->
     <div id="alert-success" class="hidden flex items-center justify-between gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
@@ -68,15 +72,16 @@
       <button type="button" onclick="fetchSongs()" class="underline font-medium shrink-0">Tentar novamente</button>
     </div>
 
-    <!-- Busca e Abas -->
-    <div class="space-y-3">
+    <!-- Barra de Pesquisa e Filtros -->
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+      <!-- Barra de Pesquisa -->
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
         <input
           id="search-input"
           type="search"
-          placeholder="Buscar por nome da música ou cantor/grupo..."
-          class="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-9 py-2.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Pesquisar por nome da música, cantor/grupo, estilo ou solista..."
+          class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-10 pr-9 py-2.5 text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
         />
         <button
           id="btn-clear-search"
@@ -88,7 +93,44 @@
         </button>
       </div>
 
-      <div class="flex items-center border-b border-slate-200 gap-4">
+      <!-- Filtros: Estilo, Solista, Cantor/Grupo -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- Filtro Estilo -->
+        <div>
+          <label for="filter-style" class="block text-xs font-medium text-slate-600 mb-1">Estilo</label>
+          <div id="filter-style-container"></div>
+        </div>
+
+        <!-- Filtro Solista -->
+        <div>
+          <label for="filter-soloist" class="block text-xs font-medium text-slate-600 mb-1">Solista</label>
+          <div id="filter-soloist-container"></div>
+        </div>
+
+        <!-- Filtro Cantor/Grupo -->
+        <div>
+          <label for="filter-artist" class="block text-xs font-medium text-slate-600 mb-1">Cantor/Grupo</label>
+          <div id="filter-artist-container"></div>
+        </div>
+      </div>
+
+      <!-- Barra de status dos filtros ativos -->
+      <div id="active-filters-bar" class="hidden pt-1 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
+        <span id="filter-results-count"></span>
+        <button
+          type="button"
+          onclick="clearAllFilters()"
+          class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium"
+        >
+          <i data-lucide="filter-x" class="w-3.5 h-3.5"></i>
+          <span>Limpar pesquisa e filtros</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Abas Ativas / Arquivadas -->
+    <div class="flex items-center justify-between border-b border-slate-200">
+      <div class="flex items-center gap-4">
         <button
           id="tab-active"
           type="button"
@@ -106,6 +148,9 @@
           Arquivadas (0)
         </button>
       </div>
+      <span class="hidden sm:inline text-xs text-slate-400">
+        Dica: pressione <kbd class="px-1.5 py-0.5 bg-slate-200/70 text-slate-600 rounded font-mono">N</kbd> para nova música
+      </span>
     </div>
 
     <!-- Estado de Carregamento -->
@@ -124,14 +169,16 @@
       <div id="empty-action-wrapper" class="pt-1"></div>
     </div>
 
-    <!-- Tabela de Músicas (Duas colunas: Nome e Cantor/Grupo) -->
-    <div id="songs-table-wrapper" class="hidden bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <table class="w-full text-left border-collapse">
+    <!-- Tabela de Músicas (4 Colunas: Nome, Cantor/Grupo, Estilo, Solista) -->
+    <div id="songs-table-wrapper" class="hidden bg-white border border-slate-200 rounded-xl overflow-x-auto shadow-sm">
+      <table class="w-full text-left border-collapse min-w-[600px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            <th scope="col" class="py-3 px-4 w-1/2">Nome</th>
-            <th scope="col" class="py-3 px-4 w-1/2">Cantor/Grupo</th>
-            <th scope="col" class="py-3 px-3 text-right w-20">
+            <th scope="col" class="py-3 px-4 w-[32%]">Nome</th>
+            <th scope="col" class="py-3 px-4 w-[24%]">Cantor/Grupo</th>
+            <th scope="col" class="py-3 px-4 w-[18%]">Estilo</th>
+            <th scope="col" class="py-3 px-4 w-[18%]">Solista</th>
+            <th scope="col" class="py-3 px-3 text-right w-[8%]">
               <span class="sr-only">Ações</span>
             </th>
           </tr>
@@ -151,7 +198,7 @@
         </button>
       </div>
 
-      <form id="song-form" class="space-y-4">
+      <form id="song-form" class="space-y-3.5">
         <div>
           <label for="input-title" class="block text-sm font-medium text-slate-700 mb-1">
             Nome da música <span class="text-red-500">*</span>
@@ -159,7 +206,7 @@
           <input
             id="input-title"
             type="text"
-            placeholder="Ex.: Lugar Secreto"
+            placeholder="Ex.: Poder do Teu amor"
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
@@ -171,9 +218,41 @@
           <input
             id="input-artist"
             type="text"
-            placeholder="Ex.: Gabriela Rocha"
+            list="datalist-artists"
+            placeholder="Ex.: Diante do Trono"
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
+          <datalist id="datalist-artists"></datalist>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="input-style" class="block text-sm font-medium text-slate-700 mb-1">
+              Estilo <span class="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <input
+              id="input-style"
+              type="text"
+              list="datalist-styles"
+              placeholder="Ex.: Adoração, Celebração"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <datalist id="datalist-styles"></datalist>
+          </div>
+
+          <div>
+            <label for="input-soloist" class="block text-sm font-medium text-slate-700 mb-1">
+              Solista <span class="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <input
+              id="input-soloist"
+              type="text"
+              list="datalist-soloists"
+              placeholder="Ex.: Ana, João"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <datalist id="datalist-soloists"></datalist>
+          </div>
         </div>
 
         <p id="form-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></p>
@@ -273,9 +352,15 @@
     let songs = [];
     let viewStatus = 'active';
     let searchTerm = '';
+    let filterStyle = '';
+    let filterSoloist = '';
+    let filterArtist = '';
     let editingSongId = null;
     let confirmTargetSong = null;
     let successTimer = null;
+
+    // Limite máximo de opções para exibir dropdown simples (<select>) vs campo digitável (<input list>)
+    const SMALL_LIST_THRESHOLD = 10;
 
     const STORAGE_URL_KEY = 'louvor_supabase_url';
     const STORAGE_ANON_KEY = 'louvor_supabase_anon_key';
@@ -326,6 +411,34 @@
         localStorage.setItem(STORAGE_ANON_KEY, key);
         closeConfigModal();
         initSupabase();
+      });
+
+      // Atalho de teclado: letra N para adicionar nova música (e Esc para fechar modais)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeSongModal();
+          closeConfirmModal();
+          return;
+        }
+
+        // Ignorar se houver modificadores (Ctrl+N, Alt+N, Cmd+N)
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        // Ignorar se o foco estiver em um campo de digitação
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        const isEditable = document.activeElement && document.activeElement.isContentEditable;
+        if (['input', 'textarea', 'select'].includes(activeTag) || isEditable) return;
+
+        // Ignorar se algum modal já estiver aberto
+        const songModalOpen = !document.getElementById('modal-song').classList.contains('hidden');
+        const confirmModalOpen = !document.getElementById('modal-confirm').classList.contains('hidden');
+        const configModalOpen = !document.getElementById('modal-config').classList.contains('hidden');
+        if (songModalOpen || confirmModalOpen || configModalOpen) return;
+
+        if (e.key.toLowerCase() === 'n') {
+          e.preventDefault();
+          openSongModal();
+        }
       });
     }
 
@@ -407,17 +520,186 @@
 
       const { data, error } = await supabaseClient
         .from('songs')
-        .select('id, title, artist, status, created_at, updated_at')
+        .select('id, title, artist, style, soloist, status, created_at, updated_at')
         .order('title', { ascending: true });
 
       document.getElementById('loading-state').classList.add('hidden');
 
       if (error) {
-        showError('Erro ao conectar com o Supabase. Verifique a URL, a Key e se a tabela "songs" foi criada.');
+        showError('Erro ao conectar com o Supabase. Verifique a URL, a Key e se as colunas "style" e "soloist" foram criadas.');
         return;
       }
 
       songs = sortSongsAlphabetically(data || []);
+      updateFilterControlsAndDatalists();
+      renderSongs();
+    }
+
+    function getUniqueValues(field) {
+      const map = new Map();
+      songs
+        .filter(s => s.status === viewStatus)
+        .forEach(song => {
+          const raw = (song[field] || '').trim();
+          if (!raw) return;
+          const key = normalizeText(raw);
+          if (!map.has(key)) {
+            map.set(key, raw);
+          }
+        });
+      return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    }
+
+    function getAllUniqueValues(field) {
+      const map = new Map();
+      songs.forEach(song => {
+        const raw = (song[field] || '').trim();
+        if (!raw) return;
+        const key = normalizeText(raw);
+        if (!map.has(key)) {
+          map.set(key, raw);
+        }
+      });
+      return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    }
+
+    /**
+     * Renderiza o controle de filtro adaptativo:
+     * - Lista pequena (<= SMALL_LIST_THRESHOLD e não forçado a digitar): <select> com todas as opções cadastradas.
+     * - Lista maior (ou campo Cantor/Grupo quando houver muitas opções): <input list="..."> onde o usuário digita e vê sugestões cadastradas.
+     */
+    function renderAdaptiveFilter({ containerId, inputId, datalistId, options, currentValue, placeholderAll, onChangeCallback, preferSearchable = false }) {
+      const container = document.getElementById(containerId);
+      const useSearchInput = preferSearchable ? options.length > 5 : options.length > SMALL_LIST_THRESHOLD;
+
+      if (!useSearchInput) {
+        container.innerHTML = `
+          <select
+            id="${inputId}"
+            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          >
+            <option value="">${escapeHtml(placeholderAll)}</option>
+            ${options.map(opt => `
+              <option value="${escapeHtml(opt)}" ${normalizeText(opt) === normalizeText(currentValue) ? 'selected' : ''}>
+                ${escapeHtml(opt)}
+              </option>
+            `).join('')}
+          </select>
+        `;
+        document.getElementById(inputId).addEventListener('change', (e) => {
+          onChangeCallback(e.target.value);
+        });
+      } else {
+        container.innerHTML = `
+          <div class="relative">
+            <input
+              id="${inputId}"
+              type="text"
+              list="${datalistId}"
+              value="${escapeHtml(currentValue)}"
+              placeholder="Digite para filtrar (${options.length})..."
+              class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-3 pr-7 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            />
+            <datalist id="${datalistId}">
+              ${options.map(opt => `<option value="${escapeHtml(opt)}"></option>`).join('')}
+            </datalist>
+            ${currentValue ? `
+              <button
+                type="button"
+                id="${inputId}-clear"
+                title="Limpar filtro"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              >
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+          </div>
+        `;
+        const inputEl = document.getElementById(inputId);
+        inputEl.addEventListener('input', (e) => {
+          onChangeCallback(e.target.value);
+        });
+        const clearEl = document.getElementById(`${inputId}-clear`);
+        if (clearEl) {
+          clearEl.addEventListener('click', () => {
+            onChangeCallback('');
+            updateFilterControlsAndDatalists();
+          });
+        }
+      }
+    }
+
+    function updateFilterControlsAndDatalists() {
+      const styles = getUniqueValues('style');
+      const soloists = getUniqueValues('soloist');
+      const artists = getUniqueValues('artist');
+
+      renderAdaptiveFilter({
+        containerId: 'filter-style-container',
+        inputId: 'filter-style',
+        datalistId: 'filter-style-list',
+        options: styles,
+        currentValue: filterStyle,
+        placeholderAll: 'Todos os estilos',
+        preferSearchable: false,
+        onChangeCallback: (val) => {
+          filterStyle = val;
+          renderSongs();
+        },
+      });
+
+      renderAdaptiveFilter({
+        containerId: 'filter-soloist-container',
+        inputId: 'filter-soloist',
+        datalistId: 'filter-soloist-list',
+        options: soloists,
+        currentValue: filterSoloist,
+        placeholderAll: 'Todos os solistas',
+        preferSearchable: false,
+        onChangeCallback: (val) => {
+          filterSoloist = val;
+          renderSongs();
+        },
+      });
+
+      renderAdaptiveFilter({
+        containerId: 'filter-artist-container',
+        inputId: 'filter-artist',
+        datalistId: 'filter-artist-list',
+        options: artists,
+        currentValue: filterArtist,
+        placeholderAll: 'Todos os cantores/grupos',
+        preferSearchable: true,
+        onChangeCallback: (val) => {
+          filterArtist = val;
+          renderSongs();
+        },
+      });
+
+      // Atualiza datalists do modal de cadastro/edição com todos os registros já usados
+      document.getElementById('datalist-artists').innerHTML = getAllUniqueValues('artist')
+        .map(v => `<option value="${escapeHtml(v)}"></option>`)
+        .join('');
+
+      document.getElementById('datalist-styles').innerHTML = getAllUniqueValues('style')
+        .map(v => `<option value="${escapeHtml(v)}"></option>`)
+        .join('');
+
+      document.getElementById('datalist-soloists').innerHTML = getAllUniqueValues('soloist')
+        .map(v => `<option value="${escapeHtml(v)}"></option>`)
+        .join('');
+
+      lucide.createIcons();
+    }
+
+    function clearAllFilters() {
+      searchTerm = '';
+      filterStyle = '';
+      filterSoloist = '';
+      filterArtist = '';
+      document.getElementById('search-input').value = '';
+      document.getElementById('btn-clear-search').classList.add('hidden');
+      updateFilterControlsAndDatalists();
       renderSongs();
     }
 
@@ -433,7 +715,17 @@
         tabArchived.className = 'pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition';
         tabActive.className = 'pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition';
       }
+      updateFilterControlsAndDatalists();
       renderSongs();
+    }
+
+    function hasActiveSearchOrFilter() {
+      return Boolean(
+        searchTerm.trim() ||
+        filterStyle.trim() ||
+        filterSoloist.trim() ||
+        filterArtist.trim()
+      );
     }
 
     function renderSongs() {
@@ -443,17 +735,41 @@
       document.getElementById('tab-active').textContent = `Ativas (${activeCount})`;
       document.getElementById('tab-archived').textContent = `Arquivadas (${archivedCount})`;
 
-      const query = normalizeText(searchTerm);
+      const qSearch = normalizeText(searchTerm);
+      const qStyle = normalizeText(filterStyle);
+      const qSoloist = normalizeText(filterSoloist);
+      const qArtist = normalizeText(filterArtist);
+
       const filtered = sortSongsAlphabetically(
         songs.filter(song => {
           if (song.status !== viewStatus) return false;
-          if (!query) return true;
-          return (
-            normalizeText(song.title).includes(query) ||
-            normalizeText(song.artist).includes(query)
-          );
+
+          if (qStyle && !normalizeText(song.style).includes(qStyle)) return false;
+          if (qSoloist && !normalizeText(song.soloist).includes(qSoloist)) return false;
+          if (qArtist && !normalizeText(song.artist).includes(qArtist)) return false;
+
+          if (qSearch) {
+            const matchSearch =
+              normalizeText(song.title).includes(qSearch) ||
+              normalizeText(song.artist).includes(qSearch) ||
+              normalizeText(song.style).includes(qSearch) ||
+              normalizeText(song.soloist).includes(qSearch);
+            if (!matchSearch) return false;
+          }
+
+          return true;
         })
       );
+
+      // Atualiza barra de contagem de filtros
+      const filtersBar = document.getElementById('active-filters-bar');
+      const countLabel = document.getElementById('filter-results-count');
+      if (hasActiveSearchOrFilter()) {
+        filtersBar.classList.remove('hidden');
+        countLabel.textContent = `${filtered.length} ${filtered.length === 1 ? 'música encontrada' : 'músicas encontradas'}`;
+      } else {
+        filtersBar.classList.add('hidden');
+      }
 
       const tableWrapper = document.getElementById('songs-table-wrapper');
       const tbody = document.getElementById('songs-tbody');
@@ -476,7 +792,15 @@
             ${escapeHtml(song.title)}
           </td>
           <td class="py-3.5 px-4 text-slate-600">
-            ${song.artist ? escapeHtml(song.artist) : '<span class="text-slate-400 italic">Não informado</span>'}
+            ${song.artist ? escapeHtml(song.artist) : '<span class="text-slate-400 italic">—</span>'}
+          </td>
+          <td class="py-3.5 px-4 text-slate-600">
+            ${song.style
+              ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">${escapeHtml(song.style)}</span>`
+              : '<span class="text-slate-400 italic">—</span>'}
+          </td>
+          <td class="py-3.5 px-4 text-slate-600">
+            ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
           </td>
           <td class="py-3.5 px-3 text-right whitespace-nowrap">
             <div class="inline-flex items-center justify-end gap-1">
@@ -510,17 +834,30 @@
       const actionEl = document.getElementById('empty-action-wrapper');
       actionEl.innerHTML = '';
 
-      if (searchTerm.trim()) {
+      if (hasActiveSearchOrFilter()) {
         titleEl.textContent = 'Nenhuma música encontrada';
-        descEl.textContent = `Não encontramos resultados para "${searchTerm.trim()}" nas músicas ${viewStatus === 'active' ? 'ativas' : 'arquivadas'}.`;
-        if (viewStatus === 'active') {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700';
-          btn.innerHTML = `<i data-lucide="plus" class="w-4 h-4"></i><span>Cadastrar "${escapeHtml(searchTerm.trim())}" agora</span>`;
-          btn.onclick = () => openSongModal(null, searchTerm.trim());
-          actionEl.appendChild(btn);
+        descEl.textContent = 'Nenhuma música corresponde aos critérios atuais de pesquisa ou filtro.';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-wrap items-center justify-center gap-3';
+
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-lg transition';
+        clearBtn.textContent = 'Limpar filtros';
+        clearBtn.onclick = clearAllFilters;
+        wrapper.appendChild(clearBtn);
+
+        if (viewStatus === 'active' && searchTerm.trim()) {
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.className = 'inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 px-3.5 py-2';
+          addBtn.innerHTML = `<i data-lucide="plus" class="w-4 h-4"></i><span>Cadastrar "${escapeHtml(searchTerm.trim())}"</span>`;
+          addBtn.onclick = () => openSongModal(null, searchTerm.trim());
+          wrapper.appendChild(addBtn);
         }
+
+        actionEl.appendChild(wrapper);
       } else if (viewStatus === 'active') {
         titleEl.textContent = 'Sua biblioteca ainda está vazia';
         descEl.textContent = 'Comece cadastrando as músicas que o grupo costuma cantar nos cultos.';
@@ -549,15 +886,19 @@
         document.getElementById('btn-save-text').textContent = 'Salvar alterações';
         document.getElementById('input-title').value = song.title;
         document.getElementById('input-artist').value = song.artist || '';
+        document.getElementById('input-style').value = song.style || '';
+        document.getElementById('input-soloist').value = song.soloist || '';
       } else {
         document.getElementById('modal-song-title').textContent = 'Nova música';
         document.getElementById('btn-save-text').textContent = 'Cadastrar';
         document.getElementById('input-title').value = prefillTitle;
         document.getElementById('input-artist').value = '';
+        document.getElementById('input-style').value = '';
+        document.getElementById('input-soloist').value = '';
       }
 
       document.getElementById('modal-song').classList.remove('hidden');
-      document.getElementById('input-title').focus();
+      setTimeout(() => document.getElementById('input-title').focus(), 20);
     }
 
     function closeSongModal() {
@@ -588,6 +929,8 @@
 
       const cleanTitle = document.getElementById('input-title').value.trim();
       const cleanArtist = document.getElementById('input-artist').value.trim();
+      const cleanStyle = document.getElementById('input-style').value.trim();
+      const cleanSoloist = document.getElementById('input-soloist').value.trim();
 
       if (!cleanTitle) {
         formErr.textContent = 'O nome da música é obrigatório.';
@@ -609,18 +952,25 @@
       const saveBtn = document.getElementById('btn-save-song');
       saveBtn.disabled = true;
 
+      const payload = {
+        title: cleanTitle,
+        artist: cleanArtist || null,
+        style: cleanStyle || null,
+        soloist: cleanSoloist || null,
+      };
+
       if (editingSongId) {
         const { data, error } = await supabaseClient
           .from('songs')
-          .update({ title: cleanTitle, artist: cleanArtist || null })
+          .update(payload)
           .eq('id', editingSongId)
-          .select('id, title, artist, status, created_at, updated_at')
+          .select('id, title, artist, style, soloist, status, created_at, updated_at')
           .single();
 
         saveBtn.disabled = false;
 
         if (error) {
-          formErr.textContent = 'Erro ao atualizar a música. Tente novamente.';
+          formErr.textContent = 'Erro ao atualizar a música. Verifique se executou a atualização SQL no Supabase.';
           formErr.classList.remove('hidden');
           return;
         }
@@ -631,18 +981,19 @@
 
         showSuccess(`Música "${cleanTitle}" atualizada.`);
         closeSongModal();
+        updateFilterControlsAndDatalists();
         renderSongs();
       } else {
         const { data, error } = await supabaseClient
           .from('songs')
-          .insert({ title: cleanTitle, artist: cleanArtist || null, status: 'active' })
-          .select('id, title, artist, status, created_at, updated_at')
+          .insert({ ...payload, status: 'active' })
+          .select('id, title, artist, style, soloist, status, created_at, updated_at')
           .single();
 
         saveBtn.disabled = false;
 
         if (error) {
-          formErr.textContent = 'Erro ao cadastrar a música. Tente novamente.';
+          formErr.textContent = 'Erro ao cadastrar a música. Verifique se executou a atualização SQL no Supabase.';
           formErr.classList.remove('hidden');
           return;
         }
@@ -686,7 +1037,7 @@
         .from('songs')
         .update({ status: nextStatus })
         .eq('id', target.id)
-        .select('id, title, artist, status, created_at, updated_at')
+        .select('id, title, artist, style, soloist, status, created_at, updated_at')
         .single();
 
       confirmBtn.disabled = false;
@@ -705,6 +1056,7 @@
           ? `"${target.title}" foi arquivada.`
           : `"${target.title}" foi restaurada para a biblioteca.`
       );
+      updateFilterControlsAndDatalists();
       renderSongs();
     }
   </script>
