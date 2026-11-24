@@ -10,6 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Ícones Lucide via CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- JSZip e SheetJS (XLSX) para importação de .zip e planilhas Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col">
 
@@ -34,6 +37,17 @@
           class="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
         >
           <i data-lucide="settings" class="w-4 h-4"></i>
+        </button>
+
+        <button
+          id="btn-open-import"
+          type="button"
+          title="Importar arquivo .zip ou planilhas Excel"
+          class="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium px-3 py-2.5 rounded-lg shadow-xs transition"
+        >
+          <i data-lucide="upload" class="w-4 h-4 text-slate-500"></i>
+          <span class="hidden sm:inline">Importar ZIP / Excel</span>
+          <span class="sm:hidden">Importar</span>
         </button>
 
         <button
@@ -95,19 +109,16 @@
 
       <!-- Filtros: Estilo, Solista, Cantor/Grupo -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <!-- Filtro Estilo -->
         <div>
           <label for="filter-style" class="block text-xs font-medium text-slate-600 mb-1">Estilo</label>
           <div id="filter-style-container"></div>
         </div>
 
-        <!-- Filtro Solista -->
         <div>
           <label for="filter-soloist" class="block text-xs font-medium text-slate-600 mb-1">Solista</label>
           <div id="filter-soloist-container"></div>
         </div>
 
-        <!-- Filtro Cantor/Grupo -->
         <div>
           <label for="filter-artist" class="block text-xs font-medium text-slate-600 mb-1">Cantor/Grupo</label>
           <div id="filter-artist-container"></div>
@@ -187,6 +198,92 @@
       </table>
     </div>
   </main>
+
+  <!-- Modal: Importação em Lote (ZIP / Excel) -->
+  <div id="modal-import" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-3xl max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Importar Cronogramas (ZIP ou Excel)</h2>
+          <p class="text-xs text-slate-500">Extrai automaticamente Nome, Cantor/Grupo e Solista, identifica o Estilo quando possível e ignora duplicadas.</p>
+        </div>
+        <button type="button" onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+        <!-- Área de seleção de arquivo -->
+        <label
+          for="import-file-input"
+          class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/30 rounded-xl p-6 cursor-pointer transition text-center"
+        >
+          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2">
+            <i data-lucide="folder-archive" class="w-5 h-5"></i>
+          </div>
+          <span class="text-sm font-medium text-slate-800">Clique para selecionar seu arquivo .zip ou planilhas (.xlsx, .xls, .csv)</span>
+          <span class="text-xs text-slate-500 mt-1">Você pode selecionar o arquivo drive-download-....zip inteiro de uma vez</span>
+          <input
+            id="import-file-input"
+            type="file"
+            accept=".zip,.xlsx,.xls,.csv"
+            multiple
+            class="hidden"
+          />
+        </label>
+
+        <!-- Progresso da leitura -->
+        <div id="import-parsing-state" class="hidden py-6 flex flex-col items-center justify-center text-slate-600 gap-2">
+          <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span id="import-parsing-text" class="text-sm">Lendo planilhas...</span>
+        </div>
+
+        <!-- Erro na leitura -->
+        <div id="import-error" class="hidden text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3"></div>
+
+        <!-- Resumo e Prévia -->
+        <div id="import-preview-section" class="hidden space-y-3">
+          <div id="import-summary-banner" class="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg px-4 py-3 text-xs flex flex-wrap items-center justify-between gap-2"></div>
+
+          <div id="import-table-container" class="border border-slate-200 rounded-xl overflow-x-auto max-h-80">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0">
+                <tr>
+                  <th class="py-2.5 px-3 w-8">
+                    <input id="import-select-all" type="checkbox" checked class="rounded border-slate-300 text-indigo-600" />
+                  </th>
+                  <th class="py-2.5 px-3">Nome</th>
+                  <th class="py-2.5 px-3">Cantor/Grupo</th>
+                  <th class="py-2.5 px-3">Estilo (auto / editável)</th>
+                  <th class="py-2.5 px-3">Solista</th>
+                </tr>
+              </thead>
+              <tbody id="import-preview-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shrink-0">
+        <span id="import-selected-count" class="text-xs text-slate-500">Nenhum arquivo selecionado</span>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeImportModal()" class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200/70 rounded-lg transition">
+            Cancelar
+          </button>
+          <button
+            id="btn-confirm-import"
+            type="button"
+            disabled
+            onclick="executeBatchImport()"
+            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:pointer-events-none text-white rounded-lg transition"
+          >
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span id="btn-confirm-import-text">Importar músicas</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Cadastro / Edição de Música -->
   <div id="modal-song" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -359,11 +456,50 @@
     let confirmTargetSong = null;
     let successTimer = null;
 
-    // Limite máximo de opções para exibir dropdown simples (<select>) vs campo digitável (<input list>)
-    const SMALL_LIST_THRESHOLD = 10;
+    // Estado da importação
+    let parsedImportCandidates = [];
 
+    const SMALL_LIST_THRESHOLD = 10;
     const STORAGE_URL_KEY = 'louvor_supabase_url';
     const STORAGE_ANON_KEY = 'louvor_supabase_anon_key';
+
+    // Base heurística de classificação automática de Estilo
+    const ARTIST_STYLE_MAP = [
+      { keywords: ['diante do trono', 'ana paula valadao', 'gabriela rocha', 'aline barros', 'fernandinho', 'isaias saad', 'alessandro vilas boas', 'morada', 'fhop', 'florianopolis house of prayer', 'casa worship', 'droppa', 'juliano son', 'livres para adorar', 'nivea soares', 'helio', 'heloisa rosa', 'laura souguellis', 'marcus salles', 'gabriel guedes', 'andre aquino', 'israel salazar', 'mariana valadao', 'adhemar de campos', 'asaph borba', 'vineyard', 'hillsong', 'elevation worship', 'bethel music', 'jesus culture', 'maverick city', 'upperroom', 'phil wickham', 'chris tomlin', 'cody carnes', 'kari jobe', 'brooke ligertwood'], style: 'Adoração' },
+      { keywords: ['renascer praise', 'toque no altar', 'trazendo a arca', 'davi sacer', 'andre valadao', 'kleber lucas', 'soraya moraes', 'ludmila ferber', 'comunidade de nilopolis', 'comunidade internacional da zona sul', 'sara nossa terra', 'arena louvor', 'lagoinha', 'central 3', 'dunamis', 'som do reino', 'dropa'], style: 'Congregacional' },
+      { keywords: ['preto no branco', 'thalles roberto', 'anderson freire', 'bruna karla', 'cassiane', 'damares', 'midian lima', 'elaine martins', 'eyshila', 'shirley carvalhaes', 'lauriete', 'valesca mayssa', 'kemilly santos', 'gerson rufino', 'flordelis', 'delino marcal', 'lukas agustinho', 'leandro borges', 'sarah farias'], style: 'Pentecostal / Júbilo' },
+      { keywords: ['oficina g3', 'rosa de saron', 'resgate', 'rodolfo abrantes', 'palavrantiga', 'os arrais', 'projeto sola', 'purples', 'mauro henrique', 'leonardo goncalves', 'daniela araujo', 'priscilla alcantara', 'eli soares'], style: 'Contemporâneo' },
+      { keywords: ['harpa crista', 'cantor cristao', 'hinario', 'hino'], style: 'Clássico / Hino' }
+    ];
+
+    const TITLE_STYLE_KEYWORDS = [
+      { keywords: ['celebrai', 'alegria', 'festa', 'dancar', 'pular', 'jubilo', 'vitoria', 'vencedor', 'fogo', 'poder de deus', 'muralhas', 'cadeias'], style: 'Celebração' },
+      { keywords: ['santo', 'adoracao', 'adorar', 'rendido', 'prostrado', 'entrega', 'intimidade', 'lugar secreto', 'espirito santo', 'presenca', 'gloria', 'cordeiro', 'cruz', 'sangue', 'graca', 'misericordia'], style: 'Adoração' },
+      { keywords: ['harpa', 'hino', 'grandioso es tu', 'castelo forte', 'rude cruz', 'alvo mais que a neve', 'porque ele vive', 'sossegai'], style: 'Clássico / Hino' }
+    ];
+
+    function inferSongStyle(title, artist) {
+      const normArtist = normalizeText(artist);
+      const normTitle = normalizeText(title);
+
+      if (normArtist) {
+        for (const entry of ARTIST_STYLE_MAP) {
+          if (entry.keywords.some(kw => normArtist.includes(kw))) {
+            return entry.style;
+          }
+        }
+      }
+
+      if (normTitle) {
+        for (const entry of TITLE_STYLE_KEYWORDS) {
+          if (entry.keywords.some(kw => normTitle.includes(kw))) {
+            return entry.style;
+          }
+        }
+      }
+
+      return ''; // Deixa em branco se não houver correspondência confiável
+    }
 
     // Inicialização
     document.addEventListener('DOMContentLoaded', () => {
@@ -375,6 +511,14 @@
     function setupEvents() {
       document.getElementById('btn-new-song').addEventListener('click', () => openSongModal());
       document.getElementById('btn-open-config').addEventListener('click', () => openConfigModal(true));
+      document.getElementById('btn-open-import').addEventListener('click', openImportModal);
+
+      document.getElementById('import-file-input').addEventListener('change', handleImportFilesSelected);
+      document.getElementById('import-select-all').addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        parsedImportCandidates.forEach(item => { item.selected = checked; });
+        renderImportPreviewTable();
+      });
 
       const searchInput = document.getElementById('search-input');
       const clearBtn = document.getElementById('btn-clear-search');
@@ -413,27 +557,28 @@
         initSupabase();
       });
 
-      // Atalho de teclado: letra N para adicionar nova música (e Esc para fechar modais)
+      // Atalho de teclado: letra N para nova música (Esc fecha modais)
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           closeSongModal();
           closeConfirmModal();
+          closeImportModal();
           return;
         }
 
-        // Ignorar se houver modificadores (Ctrl+N, Alt+N, Cmd+N)
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-        // Ignorar se o foco estiver em um campo de digitação
         const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
         const isEditable = document.activeElement && document.activeElement.isContentEditable;
         if (['input', 'textarea', 'select'].includes(activeTag) || isEditable) return;
 
-        // Ignorar se algum modal já estiver aberto
-        const songModalOpen = !document.getElementById('modal-song').classList.contains('hidden');
-        const confirmModalOpen = !document.getElementById('modal-confirm').classList.contains('hidden');
-        const configModalOpen = !document.getElementById('modal-config').classList.contains('hidden');
-        if (songModalOpen || confirmModalOpen || configModalOpen) return;
+        const anyModalOpen =
+          !document.getElementById('modal-song').classList.contains('hidden') ||
+          !document.getElementById('modal-confirm').classList.contains('hidden') ||
+          !document.getElementById('modal-config').classList.contains('hidden') ||
+          !document.getElementById('modal-import').classList.contains('hidden');
+
+        if (anyModalOpen) return;
 
         if (e.key.toLowerCase() === 'n') {
           e.preventDefault();
@@ -485,7 +630,7 @@
 
     function escapeHtml(text) {
       const div = document.createElement('div');
-      div.textContent = text;
+      div.textContent = text == null ? '' : String(text);
       return div.innerHTML;
     }
 
@@ -494,7 +639,7 @@
       document.getElementById('alert-success-text').textContent = msg;
       el.classList.remove('hidden');
       clearTimeout(successTimer);
-      successTimer = setTimeout(hideSuccess, 4000);
+      successTimer = setTimeout(hideSuccess, 5000);
     }
 
     function hideSuccess() {
@@ -535,6 +680,321 @@
       renderSongs();
     }
 
+    // =========================================================================
+    // IMPORTAÇÃO EM LOTE (.ZIP / .XLSX / .CSV)
+    // =========================================================================
+    function openImportModal() {
+      parsedImportCandidates = [];
+      document.getElementById('import-file-input').value = '';
+      document.getElementById('import-parsing-state').classList.add('hidden');
+      document.getElementById('import-error').classList.add('hidden');
+      document.getElementById('import-preview-section').classList.add('hidden');
+      document.getElementById('import-selected-count').textContent = 'Nenhum arquivo selecionado';
+      document.getElementById('btn-confirm-import').disabled = true;
+      document.getElementById('btn-confirm-import-text').textContent = 'Importar músicas';
+      document.getElementById('modal-import').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeImportModal() {
+      document.getElementById('modal-import').classList.add('hidden');
+    }
+
+    function detectColumnIndexes(headerRow) {
+      let titleIdx = -1;
+      let artistIdx = -1;
+      let soloistIdx = -1;
+
+      headerRow.forEach((cell, idx) => {
+        const h = normalizeText(String(cell || ''));
+        if (!h) return;
+
+        if (titleIdx === -1 && (h === 'nome' || h.includes('musica') || h.includes('titulo') || h.includes('cancao'))) {
+          titleIdx = idx;
+        } else if (artistIdx === -1 && (h.includes('cantor') || h.includes('grupo') || h.includes('artista') || h.includes('banda') || h.includes('interprete'))) {
+          artistIdx = idx;
+        } else if (soloistIdx === -1 && (h.includes('solista') || h.includes('ministro') || h.includes('vocal'))) {
+          soloistIdx = idx;
+        }
+      });
+
+      return { titleIdx, artistIdx, soloistIdx };
+    }
+
+    function extractRowsFromWorkbook(workbook) {
+      const extracted = [];
+
+      workbook.SheetNames.forEach((sheetName) => {
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!rows || rows.length === 0) return;
+
+        let headerRowIdx = -1;
+        let colMap = { titleIdx: -1, artistIdx: -1, soloistIdx: -1 };
+
+        // Procura a linha de cabeçalho nas primeiras 15 linhas da aba
+        const maxHeaderScan = Math.min(rows.length, 15);
+        for (let r = 0; r < maxHeaderScan; r++) {
+          const detected = detectColumnIndexes(rows[r]);
+          if (detected.titleIdx !== -1) {
+            headerRowIdx = r;
+            colMap = detected;
+            break;
+          }
+        }
+
+        // Fallback caso a planilha não tenha cabeçalho explícito, assumindo ordem: Nome | Cantor/Grupo | Solista
+        if (headerRowIdx === -1) {
+          headerRowIdx = -1;
+          colMap = { titleIdx: 0, artistIdx: 1, soloistIdx: 2 };
+        }
+
+        for (let r = headerRowIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || row.length === 0) continue;
+
+          const rawTitle = String(row[colMap.titleIdx] || '').trim();
+          const rawArtist = colMap.artistIdx !== -1 ? String(row[colMap.artistIdx] || '').trim() : '';
+          const rawSoloist = colMap.soloistIdx !== -1 ? String(row[colMap.soloistIdx] || '').trim() : '';
+
+          if (!rawTitle) continue;
+
+          // Ignora linhas que sejam repetição do cabeçalho no meio da planilha
+          const normTitle = normalizeText(rawTitle);
+          if (['nome', 'musica', 'titulo', 'nome da musica'].includes(normTitle)) continue;
+
+          extracted.push({
+            title: rawTitle,
+            artist: rawArtist,
+            soloist: rawSoloist,
+          });
+        }
+      });
+
+      return extracted;
+    }
+
+    async function handleImportFilesSelected(e) {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      const parsingEl = document.getElementById('import-parsing-state');
+      const parsingText = document.getElementById('import-parsing-text');
+      const errorEl = document.getElementById('import-error');
+      const previewEl = document.getElementById('import-preview-section');
+
+      errorEl.classList.add('hidden');
+      previewEl.classList.add('hidden');
+      parsingEl.classList.remove('hidden');
+
+      try {
+        let allRawEntries = [];
+        let filesProcessedCount = 0;
+
+        for (const file of files) {
+          const lowerName = file.name.toLowerCase();
+
+          if (lowerName.endsWith('.zip')) {
+            parsingText.textContent = `Descompactando ${file.name}...`;
+            const zip = await JSZip.loadAsync(file);
+            const entries = Object.values(zip.files).filter(
+              entry => !entry.dir && /\.(xlsx|xls|csv)$/i.test(entry.name) && !entry.name.includes('__MACOSX')
+            );
+
+            for (const entry of entries) {
+              parsingText.textContent = `Lendo ${entry.name.split('/').pop()}...`;
+              const buffer = await entry.async('arraybuffer');
+              const wb = XLSX.read(buffer, { type: 'array' });
+              allRawEntries = allRawEntries.concat(extractRowsFromWorkbook(wb));
+              filesProcessedCount++;
+            }
+          } else if (/\.(xlsx|xls|csv)$/i.test(lowerName)) {
+            parsingText.textContent = `Lendo ${file.name}...`;
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array' });
+            allRawEntries = allRawEntries.concat(extractRowsFromWorkbook(wb));
+            filesProcessedCount++;
+          }
+        }
+
+        parsingEl.classList.add('hidden');
+
+        if (filesProcessedCount === 0) {
+          errorEl.textContent = 'Nenhuma planilha (.xlsx, .xls ou .csv) foi encontrada nos arquivos selecionados.';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        // Remove duplicadas internas (entre os 20 cronogramas) e músicas que já existem no Supabase
+        const existingKeys = new Set(
+          songs.map(s => `${normalizeText(s.title)}|${normalizeText(s.artist)}`)
+        );
+        const existingTitlesWithoutArtist = new Set(
+          songs.map(s => normalizeText(s.title))
+        );
+
+        const uniqueMap = new Map();
+        let duplicatesSkipped = 0;
+
+        for (const item of allRawEntries) {
+          const normTitle = normalizeText(item.title);
+          const normArtist = normalizeText(item.artist);
+          const compositeKey = `${normTitle}|${normArtist}`;
+
+          // Se já existe exatamente igual no banco ou com mesmo título quando não há artista
+          if (existingKeys.has(compositeKey) || (!normArtist && existingTitlesWithoutArtist.has(normTitle))) {
+            duplicatesSkipped++;
+            continue;
+          }
+
+          if (uniqueMap.has(compositeKey)) {
+            // Se a ocorrência anterior não tinha solista e esta tem, aproveita o solista
+            const existingCandidate = uniqueMap.get(compositeKey);
+            if (!existingCandidate.soloist && item.soloist) {
+              existingCandidate.soloist = item.soloist;
+            }
+            duplicatesSkipped++;
+            continue;
+          }
+
+          uniqueMap.set(compositeKey, {
+            title: item.title,
+            artist: item.artist,
+            style: inferSongStyle(item.title, item.artist),
+            soloist: item.soloist,
+            selected: true,
+          });
+        }
+
+        parsedImportCandidates = sortSongsAlphabetically(Array.from(uniqueMap.values()));
+
+        const summaryBanner = document.getElementById('import-summary-banner');
+        const autoStyledCount = parsedImportCandidates.filter(c => Boolean(c.style)).length;
+
+        summaryBanner.innerHTML = `
+          <div>
+            <strong>${filesProcessedCount}</strong> ${filesProcessedCount === 1 ? 'planilha lida' : 'planilhas lidas'} •
+            <strong>${parsedImportCandidates.length}</strong> ${parsedImportCandidates.length === 1 ? 'música nova encontrada' : 'músicas novas encontradas'}
+            ${duplicatesSkipped > 0 ? `(${duplicatesSkipped} repetidas ignoradas)` : ''}
+          </div>
+          <div class="text-indigo-700">
+            Estilo identificado automaticamente em <strong>${autoStyledCount}</strong> de ${parsedImportCandidates.length}
+          </div>
+        `;
+
+        previewEl.classList.remove('hidden');
+        document.getElementById('import-select-all').checked = true;
+        renderImportPreviewTable();
+      } catch (err) {
+        parsingEl.classList.add('hidden');
+        errorEl.textContent = 'Não foi possível ler o arquivo. Verifique se o .zip ou as planilhas não estão corrompidos.';
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function renderImportPreviewTable() {
+      const tbody = document.getElementById('import-preview-tbody');
+      const tableContainer = document.getElementById('import-table-container');
+      const confirmBtn = document.getElementById('btn-confirm-import');
+      const confirmText = document.getElementById('btn-confirm-import-text');
+      const selectedCountEl = document.getElementById('import-selected-count');
+
+      if (parsedImportCandidates.length === 0) {
+        tableContainer.classList.add('hidden');
+        confirmBtn.disabled = true;
+        confirmText.textContent = 'Importar músicas';
+        selectedCountEl.textContent = 'Nenhuma música nova para importar';
+        return;
+      }
+
+      tableContainer.classList.remove('hidden');
+
+      tbody.innerHTML = parsedImportCandidates.map((item, index) => `
+        <tr class="${item.selected ? 'bg-white' : 'bg-slate-50 opacity-60'}">
+          <td class="py-2 px-3">
+            <input
+              type="checkbox"
+              ${item.selected ? 'checked' : ''}
+              onchange="toggleImportRow(${index}, this.checked)"
+              class="rounded border-slate-300 text-indigo-600"
+            />
+          </td>
+          <td class="py-2 px-3 font-medium text-slate-900">${escapeHtml(item.title)}</td>
+          <td class="py-2 px-3 text-slate-600">${item.artist ? escapeHtml(item.artist) : '<span class="text-slate-400">—</span>'}</td>
+          <td class="py-2 px-3">
+            <input
+              type="text"
+              value="${escapeHtml(item.style)}"
+              placeholder="Em branco"
+              onchange="updateImportRowStyle(${index}, this.value)"
+              class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+            />
+          </td>
+          <td class="py-2 px-3 text-slate-600">${item.soloist ? escapeHtml(item.soloist) : '<span class="text-slate-400">—</span>'}</td>
+        </tr>
+      `).join('');
+
+      const selectedCount = parsedImportCandidates.filter(c => c.selected).length;
+      selectedCountEl.textContent = `${selectedCount} de ${parsedImportCandidates.length} selecionadas`;
+      confirmBtn.disabled = selectedCount === 0;
+      confirmText.textContent = selectedCount > 0 ? `Importar ${selectedCount} ${selectedCount === 1 ? 'música' : 'músicas'}` : 'Importar músicas';
+    }
+
+    function toggleImportRow(index, isChecked) {
+      if (!parsedImportCandidates[index]) return;
+      parsedImportCandidates[index].selected = isChecked;
+      renderImportPreviewTable();
+    }
+
+    function updateImportRowStyle(index, newStyle) {
+      if (!parsedImportCandidates[index]) return;
+      parsedImportCandidates[index].style = newStyle.trim();
+    }
+
+    async function executeBatchImport() {
+      const toInsert = parsedImportCandidates
+        .filter(c => c.selected && c.title.trim())
+        .map(c => ({
+          title: c.title.trim(),
+          artist: c.artist.trim() || null,
+          style: c.style.trim() || null,
+          soloist: c.soloist.trim() || null,
+          status: 'active',
+        }));
+
+      if (toInsert.length === 0) return;
+
+      const confirmBtn = document.getElementById('btn-confirm-import');
+      const confirmText = document.getElementById('btn-confirm-import-text');
+      const errorEl = document.getElementById('import-error');
+
+      confirmBtn.disabled = true;
+      confirmText.textContent = 'Salvando no banco...';
+      errorEl.classList.add('hidden');
+
+      const { data, error } = await supabaseClient
+        .from('songs')
+        .insert(toInsert)
+        .select('id, title, artist, style, soloist, status, created_at, updated_at');
+
+      confirmBtn.disabled = false;
+
+      if (error) {
+        confirmText.textContent = `Importar ${toInsert.length} músicas`;
+        errorEl.textContent = 'Erro ao salvar as músicas no Supabase. Verifique a conexão e se as colunas foram criadas.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      songs = sortSongsAlphabetically([...songs, ...(data || [])]);
+      closeImportModal();
+      setViewStatus('active');
+      showSuccess(`${(data || []).length} músicas importadas com sucesso para a biblioteca!`);
+    }
+
+    // =========================================================================
+    // FILTROS E LISTAGEM PRINCIPAL
+    // =========================================================================
     function getUniqueValues(field) {
       const map = new Map();
       songs
@@ -563,11 +1023,6 @@
       return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
     }
 
-    /**
-     * Renderiza o controle de filtro adaptativo:
-     * - Lista pequena (<= SMALL_LIST_THRESHOLD e não forçado a digitar): <select> com todas as opções cadastradas.
-     * - Lista maior (ou campo Cantor/Grupo quando houver muitas opções): <input list="..."> onde o usuário digita e vê sugestões cadastradas.
-     */
     function renderAdaptiveFilter({ containerId, inputId, datalistId, options, currentValue, placeholderAll, onChangeCallback, preferSearchable = false }) {
       const container = document.getElementById(containerId);
       const useSearchInput = preferSearchable ? options.length > 5 : options.length > SMALL_LIST_THRESHOLD;
@@ -676,7 +1131,6 @@
         },
       });
 
-      // Atualiza datalists do modal de cadastro/edição com todos os registros já usados
       document.getElementById('datalist-artists').innerHTML = getAllUniqueValues('artist')
         .map(v => `<option value="${escapeHtml(v)}"></option>`)
         .join('');
@@ -761,7 +1215,6 @@
         })
       );
 
-      // Atualiza barra de contagem de filtros
       const filtersBar = document.getElementById('active-filters-bar');
       const countLabel = document.getElementById('filter-results-count');
       if (hasActiveSearchOrFilter()) {
@@ -860,13 +1313,26 @@
         actionEl.appendChild(wrapper);
       } else if (viewStatus === 'active') {
         titleEl.textContent = 'Sua biblioteca ainda está vazia';
-        descEl.textContent = 'Comece cadastrando as músicas que o grupo costuma cantar nos cultos.';
+        descEl.textContent = 'Comece cadastrando uma música ou importe seu arquivo .zip de cronogramas.';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-wrap items-center justify-center gap-2';
+
+        const importBtn = document.createElement('button');
+        importBtn.type = 'button';
+        importBtn.className = 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium px-4 py-2 rounded-lg transition';
+        importBtn.innerHTML = `<i data-lucide="upload" class="w-4 h-4"></i><span>Importar ZIP / Excel</span>`;
+        importBtn.onclick = openImportModal;
+        wrapper.appendChild(importBtn);
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition';
         btn.innerHTML = `<i data-lucide="plus" class="w-4 h-4"></i><span>Cadastrar primeira música</span>`;
         btn.onclick = () => openSongModal();
-        actionEl.appendChild(btn);
+        wrapper.appendChild(btn);
+
+        actionEl.appendChild(wrapper);
       } else {
         titleEl.textContent = 'Nenhuma música arquivada';
         descEl.textContent = 'Músicas arquivadas continuam preservadas no histórico e aparecem aqui.';
