@@ -94,7 +94,7 @@
       <button type="button" onclick="fetchAllData()" class="underline font-medium shrink-0">Tentar novamente</button>
     </div>
 
-    <!-- Barra de Seleção Ativa (Aparece quando você está montando/editando um repertório e escolhendo músicas na biblioteca) -->
+    <!-- Barra de Seleção Ativa -->
     <div id="selection-mode-banner" class="hidden bg-emerald-600 text-white rounded-xl p-3.5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-[61px] sm:top-[69px] z-10">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
@@ -207,7 +207,7 @@
             >
               <option value="">Qualquer data</option>
               <option value="safe">Disponíveis (+30 dias ou nunca)</option>
-              <option value="never">Nunca incluída em repertório</option>
+              <option value="never">Sem registro de repertório</option>
               <option value="recent">Tocadas nos últimos 30 dias</option>
             </select>
           </div>
@@ -253,9 +253,9 @@
             <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <th scope="col" class="py-3 px-4 w-[28%]">Nome</th>
               <th scope="col" class="py-3 px-4 w-[20%]">Cantor/Grupo</th>
-              <th scope="col" class="py-3 px-3 w-[14%]">Estilo</th>
+              <th scope="col" class="py-3 px-3 w-[16%]">Estilo</th>
               <th scope="col" class="py-3 px-3 w-[14%]">Solista</th>
-              <th scope="col" class="py-3 px-3 w-[16%]">Última vez</th>
+              <th scope="col" class="py-3 px-3 w-[14%]">Última vez</th>
               <th scope="col" class="py-3 px-3 text-right w-[8%]">
                 <span class="sr-only">Ações</span>
               </th>
@@ -496,7 +496,7 @@
                   </th>
                   <th class="py-2.5 px-3">Nome</th>
                   <th class="py-2.5 px-3">Cantor/Grupo (Autor)</th>
-                  <th class="py-2.5 px-3 w-36">Estilo</th>
+                  <th class="py-2.5 px-3 w-40">Estilo</th>
                   <th class="py-2.5 px-3">Solista (Solo)</th>
                 </tr>
               </thead>
@@ -527,7 +527,7 @@
     </div>
   </div>
 
-  <!-- Modal: Cadastro / Edição de Música -->
+  <!-- Modal: Cadastro / Edição de Música (Múltiplos Estilos + Criar Novo Estilo) -->
   <div id="modal-song" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-5 space-y-4">
       <div class="flex items-center justify-between">
@@ -550,34 +550,19 @@
           />
         </div>
 
-        <div>
-          <label for="input-artist" class="block text-sm font-medium text-slate-700 mb-1">
-            Cantor ou grupo <span class="text-slate-400 font-normal">(opcional)</span>
-          </label>
-          <input
-            id="input-artist"
-            type="text"
-            list="datalist-artists"
-            placeholder="Ex.: Diante do Trono"
-            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <datalist id="datalist-artists"></datalist>
-        </div>
-
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label for="input-style" class="block text-sm font-medium text-slate-700 mb-1">
-              Estilo <span class="text-slate-400 font-normal">(opcional)</span>
+            <label for="input-artist" class="block text-sm font-medium text-slate-700 mb-1">
+              Cantor ou grupo <span class="text-slate-400 font-normal">(opcional)</span>
             </label>
-            <select
-              id="input-style"
-              class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Em branco</option>
-              <option value="Adoração">Adoração</option>
-              <option value="Celebração">Celebração</option>
-              <option value="Missões">Missões</option>
-            </select>
+            <input
+              id="input-artist"
+              type="text"
+              list="datalist-artists"
+              placeholder="Ex.: Diante do Trono"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <datalist id="datalist-artists"></datalist>
           </div>
 
           <div>
@@ -592,6 +577,44 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
             <datalist id="datalist-soloists"></datalist>
+          </div>
+        </div>
+
+        <!-- Seleção múltipla de Estilos + Criação de novo estilo -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-medium text-slate-700">
+              Estilos / Categorias <span class="text-slate-400 font-normal">(selecione um ou mais)</span>
+            </label>
+            <button
+              type="button"
+              id="btn-clear-selected-styles"
+              onclick="clearSelectedStylesInModal()"
+              class="hidden text-xs text-slate-400 hover:text-slate-600"
+            >
+              Limpar
+            </button>
+          </div>
+
+          <!-- Chips clicáveis com todos os estilos existentes -->
+          <div id="style-chips-container" class="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 border border-slate-200 rounded-xl min-h-[44px]"></div>
+
+          <!-- Input para digitar um novo estilo que ainda não está na lista -->
+          <div class="flex items-center gap-1.5">
+            <input
+              id="input-new-style-custom"
+              type="text"
+              placeholder="Novo estilo (ex.: Ceia, Infantil, Batismo)..."
+              class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button
+              type="button"
+              onclick="addCustomStyleFromInput()"
+              class="inline-flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition shrink-0"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Adicionar</span>
+            </button>
           </div>
         </div>
 
@@ -711,15 +734,62 @@
     let confirmTargetSong = null;
     let successTimer = null;
 
+    // Estado de estilos selecionados no modal (array de strings)
+    let modalSelectedStyles = [];
+
     let parsedImportCandidates = [];
 
     const SMALL_LIST_THRESHOLD = 10;
     const STORAGE_URL_KEY = 'louvor_supabase_url';
     const STORAGE_ANON_KEY = 'louvor_supabase_anon_key';
-    const ALLOWED_STYLES = ['Adoração', 'Celebração', 'Missões'];
+    const BASE_STYLES = ['Adoração', 'Celebração', 'Missões'];
 
     // =========================================================================
-    // CLASSIFICAÇÃO AUTOMÁTICA NAS 3 CATEGORIAS: Missões | Celebração | Adoração
+    // UTILITÁRIOS DE MÚLTIPLOS ESTILOS (EX: "Missões / Celebração")
+    // =========================================================================
+    function parseStylesArray(styleStr) {
+      if (!styleStr) return [];
+      return String(styleStr)
+        .split(/[\/,;]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    function formatStylesString(stylesArr) {
+      const uniqueMap = new Map();
+      (stylesArr || []).forEach(st => {
+        const clean = String(st || '').trim();
+        if (!clean) return;
+        const key = normalizeText(clean);
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, clean);
+        }
+      });
+      return Array.from(uniqueMap.values()).join(' / ');
+    }
+
+    function getAllAvailableStyles() {
+      const map = new Map();
+      BASE_STYLES.forEach(st => map.set(normalizeText(st), st));
+      songs.forEach(song => {
+        parseStylesArray(song.style).forEach(st => {
+          const key = normalizeText(st);
+          if (!map.has(key)) {
+            map.set(key, st);
+          }
+        });
+      });
+      modalSelectedStyles.forEach(st => {
+        const key = normalizeText(st);
+        if (!map.has(key)) {
+          map.set(key, st);
+        }
+      });
+      return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    }
+
+    // =========================================================================
+    // CLASSIFICAÇÃO AUTOMÁTICA NAS 3 CATEGORIAS BASE: Missões | Celebração | Adoração
     // =========================================================================
     const MISSIONS_KEYWORDS = [
       'missoes', 'missao', 'ide', 'eis-me aqui', 'eis me aqui', 'envia-me', 'envia me',
@@ -763,10 +833,13 @@
       const normTitle = normalizeText(title);
       const normArtist = normalizeText(artist);
 
-      if (MISSIONS_KEYWORDS.some(kw => normTitle.includes(kw))) return 'Missões';
-
+      const hasMissions = MISSIONS_KEYWORDS.some(kw => normTitle.includes(kw));
       const isCelebrationTitle = CELEBRATION_KEYWORDS.some(kw => normTitle.includes(kw));
       const isWorshipTitle = WORSHIP_KEYWORDS.some(kw => normTitle.includes(kw));
+
+      if (hasMissions && isCelebrationTitle) return 'Missões / Celebração';
+      if (hasMissions && isWorshipTitle) return 'Missões / Adoração';
+      if (hasMissions) return 'Missões';
 
       if (isCelebrationTitle && !isWorshipTitle) return 'Celebração';
       if (isWorshipTitle && !isCelebrationTitle) return 'Adoração';
@@ -831,6 +904,14 @@
 
       document.getElementById('input-title').addEventListener('input', hideDuplicateBox);
       document.getElementById('input-artist').addEventListener('input', hideDuplicateBox);
+
+      // Permitir pressionar Enter no campo de novo estilo sem submeter o formulário inteiro
+      document.getElementById('input-new-style-custom').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addCustomStyleFromInput();
+        }
+      });
 
       document.getElementById('song-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -937,16 +1018,25 @@
       return div.innerHTML;
     }
 
-    function getStyleBadgeHtml(style) {
-      if (!style) return '<span class="text-slate-400 italic text-xs">—</span>';
-      const norm = normalizeText(style);
+    function getSingleStyleBadgeHtml(singleStyle) {
+      const norm = normalizeText(singleStyle);
       if (norm === 'celebracao') {
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/70">${escapeHtml(style)}</span>`;
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/70">${escapeHtml(singleStyle)}</span>`;
       }
       if (norm === 'missoes') {
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">${escapeHtml(style)}</span>`;
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">${escapeHtml(singleStyle)}</span>`;
       }
-      return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/70">${escapeHtml(style)}</span>`;
+      if (norm === 'adoracao') {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/70">${escapeHtml(singleStyle)}</span>`;
+      }
+      // Estilos personalizados criados pelos usuários recebem destaque em roxo/violeta suave
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200/70">${escapeHtml(singleStyle)}</span>`;
+    }
+
+    function getStyleBadgesHtml(styleStr, emptyFallback = '<span class="text-slate-400 italic text-xs">—</span>') {
+      const list = parseStylesArray(styleStr);
+      if (list.length === 0) return emptyFallback;
+      return `<div class="flex flex-wrap gap-1">${list.map(getSingleStyleBadgeHtml).join('')}</div>`;
     }
 
     // =========================================================================
@@ -960,7 +1050,7 @@
 
     function getNextSundayISO() {
       const now = new Date();
-      const day = now.getDay(); // 0 = Domingo
+      const day = now.getDay();
       const diff = day === 0 ? 7 : 7 - day;
       const nextSun = new Date(now);
       nextSun.setDate(now.getDate() + diff);
@@ -976,7 +1066,6 @@
 
       for (const link of setlistSongs) {
         if (link.song_id !== songId) continue;
-        // Ignora o próprio repertório que está aberto em edição neste momento para não confundir o usuário
         if (isSelectingForSetlist && link.setlist_id === activeSetlistId) continue;
 
         const sl = setlistMap.get(link.setlist_id);
@@ -987,12 +1076,13 @@
         }
       }
 
+      // Quando ainda não há registro, retorna badgeHtml vazio (em branco)
       if (!latestDateStr) {
         return {
           hasPlayed: false,
           daysDiff: Infinity,
-          label: 'Nunca tocada',
-          badgeHtml: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">Nunca tocada</span>`
+          label: '',
+          badgeHtml: ''
         };
       }
 
@@ -1020,11 +1110,11 @@
         label = months === 1 ? 'Há 1 mês' : `Há ${months} meses`;
       }
 
-      let badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'; // +30 dias: liberada!
+      let badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200/70';
       if (diffDays <= 14) {
-        badgeClass = 'bg-rose-50 text-rose-700 border border-rose-200/80'; // Muito recente (<= 14 dias)
+        badgeClass = 'bg-rose-50 text-rose-700 border border-rose-200/80';
       } else if (diffDays < 30) {
-        badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200/80'; // Recente (15 a 29 dias)
+        badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200/80';
       }
 
       return {
@@ -1093,7 +1183,7 @@
       setlistSongs = setlistSongsRes.data || [];
 
       if (setlistsRes.error) {
-        showError('Aviso: Execute o SQL das tabelas "setlists" e "setlist_songs" no Supabase para habilitar os repertórios.');
+        showError('Execute o SQL das tabelas "setlists" e "setlist_songs" no Supabase para habilitar os repertórios.');
       }
 
       updateFilterControlsAndDatalists();
@@ -1142,7 +1232,7 @@
       btn.disabled = false;
 
       if (error) {
-        errEl.textContent = 'Erro ao criar repertório. Verifique se executou o SQL das tabelas no Supabase.';
+        errEl.textContent = 'Erro ao criar repertório. Execute o SQL das tabelas "setlists" e "setlist_songs" no Supabase.';
         errEl.classList.remove('hidden');
         return;
       }
@@ -1152,7 +1242,6 @@
       updateTabsUI();
       renderSetlists();
 
-      // Ativa o modo de seleção direto na biblioteca
       activeSetlistId = data.id;
       isSelectingForSetlist = true;
       setMainTab('active');
@@ -1187,7 +1276,6 @@
       const existing = setlistSongs.find(ls => ls.setlist_id === activeSetlistId && ls.song_id === songId);
 
       if (existing) {
-        // Remove do repertório
         const { error } = await supabaseClient
           .from('setlist_songs')
           .delete()
@@ -1199,7 +1287,6 @@
         }
         setlistSongs = setlistSongs.filter(ls => ls.id !== existing.id);
       } else {
-        // Adiciona ao repertório
         const currentItems = setlistSongs.filter(ls => ls.setlist_id === activeSetlistId);
         const nextPos = currentItems.length + 1;
 
@@ -1670,10 +1757,11 @@
       btn.disabled = true;
       btn.innerHTML = '<span>Analisando...</span>';
 
-      const prompt = `Classifique cada música gospel/cristã brasileira abaixo em APENAS UMA destas três categorias exatas:
+      const prompt = `Classifique cada música gospel/cristã brasileira abaixo usando estas categorias:
 - "Celebração" (músicas animadas, rápidas, festivas, de júbilo ou vitória)
 - "Adoração" (músicas mais tranquilas, lentas, congregacionais de entrega, intimidade ou louvor suave)
 - "Missões" (músicas com temática de evangelismo, envio, povos, nações, colheita ou clamor pelo mundo)
+Se uma música unir missões e ritmo festivo/lento, você pode combinar como "Missões / Celebração" ou "Missões / Adoração".
 
 Se você não conhecer a música com segurança, retorne "" (string vazia).
 Responda SOMENTE com um array JSON válido no formato [{"idx": 0, "style": "Adoração"}], sem markdown ou texto extra.
@@ -1707,8 +1795,8 @@ ${JSON.stringify(unclassified)}`;
         if (Array.isArray(classifications)) {
           classifications.forEach(entry => {
             const target = parsedImportCandidates[entry.idx];
-            if (target && ALLOWED_STYLES.includes(entry.style)) {
-              target.style = entry.style;
+            if (target && entry.style) {
+              target.style = formatStylesString(parseStylesArray(entry.style));
               updatedCount++;
             }
           });
@@ -1746,6 +1834,7 @@ ${JSON.stringify(unclassified)}`;
       }
 
       tableContainer.classList.remove('hidden');
+      const styleOptions = ['Adoração', 'Celebração', 'Missões', 'Missões / Celebração', 'Missões / Adoração'];
 
       tbody.innerHTML = parsedImportCandidates.map((item, index) => `
         <tr class="${item.selected ? 'bg-white' : 'bg-slate-50 opacity-60'}">
@@ -1765,9 +1854,9 @@ ${JSON.stringify(unclassified)}`;
               class="w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:border-indigo-500"
             >
               <option value="" ${!item.style ? 'selected' : ''}>Em branco</option>
-              <option value="Adoração" ${item.style === 'Adoração' ? 'selected' : ''}>Adoração</option>
-              <option value="Celebração" ${item.style === 'Celebração' ? 'selected' : ''}>Celebração</option>
-              <option value="Missões" ${item.style === 'Missões' ? 'selected' : ''}>Missões</option>
+              ${styleOptions.map(opt => `
+                <option value="${opt}" ${item.style === opt ? 'selected' : ''}>${opt}</option>
+              `).join('')}
             </select>
           </td>
           <td class="py-2 px-3 text-slate-600">${item.soloist ? escapeHtml(item.soloist) : '<span class="text-slate-400">—</span>'}</td>
@@ -1926,6 +2015,18 @@ ${JSON.stringify(unclassified)}`;
     }
 
     function updateFilterControlsAndDatalists() {
+      // Atualiza dinamicamente as opções do filtro de Estilo com qualquer estilo customizado criado
+      const styleSelect = document.getElementById('filter-style');
+      const currentStyleVal = filterStyle;
+      const allStyles = getAllAvailableStyles();
+
+      styleSelect.innerHTML = `
+        <option value="">Todos os estilos</option>
+        ${allStyles.map(st => `<option value="${escapeHtml(st)}">${escapeHtml(st)}</option>`).join('')}
+        <option value="__EMPTY__">Sem estilo definido</option>
+      `;
+      styleSelect.value = currentStyleVal;
+
       const soloists = getUniqueValues('soloist');
       const artists = getUniqueValues('artist');
 
@@ -2048,9 +2149,10 @@ ${JSON.stringify(unclassified)}`;
           if (song.status !== mainTab) return false;
 
           if (filterStyle === '__EMPTY__') {
-            if ((song.style || '').trim() !== '') return false;
+            if (parseStylesArray(song.style).length > 0) return false;
           } else if (filterStyle) {
-            if (normalizeText(song.style) !== normalizeText(filterStyle)) return false;
+            const songStylesNorm = parseStylesArray(song.style).map(normalizeText);
+            if (!songStylesNorm.includes(normalizeText(filterStyle))) return false;
           }
 
           if (qSoloist && !normalizeText(song.soloist).includes(qSoloist)) return false;
@@ -2119,7 +2221,7 @@ ${JSON.stringify(unclassified)}`;
                   : ''}
               </div>
               <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-                ${song.style ? getStyleBadgeHtml(song.style) : ''}
+                ${getStyleBadgesHtml(song.style, '')}
                 ${song.soloist
                   ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
                       <i data-lucide="mic" class="w-3 h-3 text-slate-500"></i>
@@ -2180,7 +2282,7 @@ ${JSON.stringify(unclassified)}`;
               ${song.artist ? escapeHtml(song.artist) : '<span class="text-slate-400 italic">—</span>'}
             </td>
             <td class="py-3.5 px-3 text-slate-600">
-              ${getStyleBadgeHtml(song.style)}
+              ${getStyleBadgesHtml(song.style)}
             </td>
             <td class="py-3.5 px-3 text-slate-600">
               ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
@@ -2288,11 +2390,85 @@ ${JSON.stringify(unclassified)}`;
       }
     }
 
+    // =========================================================================
+    // MODAL DE CADASTRO / EDIÇÃO COM MÚLTIPLOS ESTILOS E CRIAÇÃO DE NOVOS ESTILOS
+    // =========================================================================
+    function renderStyleChipsInModal() {
+      const container = document.getElementById('style-chips-container');
+      const clearBtn = document.getElementById('btn-clear-selected-styles');
+      const allStyles = getAllAvailableStyles();
+      const selectedNormSet = new Set(modalSelectedStyles.map(normalizeText));
+
+      clearBtn.classList.toggle('hidden', modalSelectedStyles.length === 0);
+
+      container.innerHTML = allStyles.map(st => {
+        const isSelected = selectedNormSet.has(normalizeText(st));
+        return `
+          <button
+            type="button"
+            onclick="toggleStyleChipInModal('${escapeHtml(st).replace(/'/g, "\\'")}')"
+            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition border ${
+              isSelected
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/40'
+            }"
+          >
+            ${isSelected ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+            <span>${escapeHtml(st)}</span>
+          </button>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function toggleStyleChipInModal(styleLabel) {
+      const targetNorm = normalizeText(styleLabel);
+      const existsIdx = modalSelectedStyles.findIndex(s => normalizeText(s) === targetNorm);
+
+      if (existsIdx !== -1) {
+        modalSelectedStyles.splice(existsIdx, 1);
+      } else {
+        modalSelectedStyles.push(styleLabel.trim());
+      }
+      renderStyleChipsInModal();
+    }
+
+    function clearSelectedStylesInModal() {
+      modalSelectedStyles = [];
+      renderStyleChipsInModal();
+    }
+
+    function addCustomStyleFromInput() {
+      const input = document.getElementById('input-new-style-custom');
+      const raw = input.value.trim();
+      if (!raw) return;
+
+      // Suporta inclusive se a pessoa digitar "Missões / Louvor" de uma vez
+      const parts = parseStylesArray(raw);
+      const existingAll = getAllAvailableStyles();
+
+      parts.forEach(part => {
+        const normPart = normalizeText(part);
+        // Reaproveita grafia exata se já existir (ex.: digitou "adoracao" -> usa "Adoração")
+        const canonical = existingAll.find(st => normalizeText(st) === normPart) ||
+          (part.charAt(0).toUpperCase() + part.slice(1));
+
+        if (!modalSelectedStyles.some(s => normalizeText(s) === normPart)) {
+          modalSelectedStyles.push(canonical);
+        }
+      });
+
+      input.value = '';
+      renderStyleChipsInModal();
+    }
+
     function openSongModal(songId = null, prefillTitle = '') {
       editingSongId = songId;
       const formErr = document.getElementById('form-error');
       formErr.classList.add('hidden');
       hideDuplicateBox();
+      document.getElementById('input-new-style-custom').value = '';
 
       if (songId) {
         const song = songs.find(s => s.id === songId);
@@ -2301,17 +2477,18 @@ ${JSON.stringify(unclassified)}`;
         document.getElementById('btn-save-text').textContent = 'Salvar alterações';
         document.getElementById('input-title').value = song.title;
         document.getElementById('input-artist').value = song.artist || '';
-        document.getElementById('input-style').value = ALLOWED_STYLES.includes(song.style) ? song.style : '';
         document.getElementById('input-soloist').value = song.soloist || '';
+        modalSelectedStyles = parseStylesArray(song.style);
       } else {
         document.getElementById('modal-song-title').textContent = 'Nova música';
         document.getElementById('btn-save-text').textContent = 'Cadastrar';
         document.getElementById('input-title').value = prefillTitle;
         document.getElementById('input-artist').value = '';
-        document.getElementById('input-style').value = '';
         document.getElementById('input-soloist').value = '';
+        modalSelectedStyles = [];
       }
 
+      renderStyleChipsInModal();
       document.getElementById('modal-song').classList.remove('hidden');
       if (window.innerWidth >= 640) {
         setTimeout(() => document.getElementById('input-title').focus(), 20);
@@ -2321,6 +2498,7 @@ ${JSON.stringify(unclassified)}`;
     function closeSongModal() {
       document.getElementById('modal-song').classList.add('hidden');
       editingSongId = null;
+      modalSelectedStyles = [];
     }
 
     function hideDuplicateBox() {
@@ -2344,9 +2522,14 @@ ${JSON.stringify(unclassified)}`;
       const formErr = document.getElementById('form-error');
       formErr.classList.add('hidden');
 
+      // Caso o usuário tenha digitado um novo estilo e clicado direto em "Cadastrar" sem clicar no botão "+ Adicionar"
+      if (document.getElementById('input-new-style-custom').value.trim()) {
+        addCustomStyleFromInput();
+      }
+
       const cleanTitle = document.getElementById('input-title').value.trim();
       const cleanArtist = document.getElementById('input-artist').value.trim();
-      const cleanStyle = document.getElementById('input-style').value.trim();
+      const cleanStyle = formatStylesString(modalSelectedStyles);
       const cleanSoloist = document.getElementById('input-soloist').value.trim();
 
       if (!cleanTitle) {
