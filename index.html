@@ -160,7 +160,7 @@
       <img
         src="logo.png"
         alt="Logo Adora App"
-        class="h-10 sm:h-12 w-auto rounded-lg object-contain shrink-0"
+        class="h-14 sm:h-16 w-auto rounded-xl object-contain mx-auto"
       />
       <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
@@ -1732,17 +1732,43 @@
 
       const btn = document.getElementById('btn-clone-catalog');
       btn.disabled = true;
+      btn.textContent = 'Verificando...';
+
+      const { data: existingTargetSongs, error: fetchErr } = await supabaseClient
+        .from('songs')
+        .select('title, artist')
+        .eq('user_id', targetUserId);
+
+      if (fetchErr) {
+        btn.disabled = false;
+        btn.textContent = 'Copiar músicas para esta conta';
+        showError('Erro ao verificar músicas existentes na conta de destino.');
+        return;
+      }
+
+      const existingKeys = new Set(
+        (existingTargetSongs || []).map(s => `${normalizeText(s.title)}|${normalizeText(s.artist)}`)
+      );
+
+      const payload = activeSongsToClone
+        .filter(s => !existingKeys.has(`${normalizeText(s.title)}|${normalizeText(s.artist)}`))
+        .map(s => ({
+          user_id: targetUserId,
+          title: s.title,
+          artist: s.artist || null,
+          style: s.style || null,
+          soloist: s.soloist || null,
+          status: 'active'
+        }));
+
+      if (payload.length === 0) {
+        btn.disabled = false;
+        btn.textContent = 'Copiar músicas para esta conta';
+        showSuccess('Todas as músicas do seu catálogo já existem nessa conta.');
+        return;
+      }
+
       btn.textContent = 'Copiando...';
-
-      const payload = activeSongsToClone.map(s => ({
-        user_id: targetUserId,
-        title: s.title,
-        artist: s.artist || null,
-        style: s.style || null,
-        soloist: s.soloist || null,
-        status: 'active'
-      }));
-
       const { error } = await supabaseClient
         .from('songs')
         .insert(payload);
@@ -1761,7 +1787,7 @@
         .eq('id', targetUserId);
 
       await fetchAdminProfiles();
-      showSuccess(`${payload.length} músicas copiadas para a conta do grupo com sucesso!`);
+      showSuccess(`${payload.length} músicas novas copiadas para a conta do grupo com sucesso!`);
     }
 
     function renderAdminUsersList() {
@@ -2006,14 +2032,17 @@
         supabaseClient
           .from('songs')
           .select('id, title, artist, style, soloist, status, created_at, updated_at')
+          .eq('user_id', currentUser.id)
           .order('title', { ascending: true }),
         supabaseClient
           .from('setlists')
           .select('id, service_date, title, created_at')
+          .eq('user_id', currentUser.id)
           .order('service_date', { ascending: false }),
         supabaseClient
           .from('setlist_songs')
           .select('id, setlist_id, song_id, position, created_at')
+          .eq('user_id', currentUser.id)
           .order('position', { ascending: true })
       ]);
 
