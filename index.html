@@ -25,7 +25,7 @@
         </div>
         <div class="min-w-0">
           <h1 class="text-base sm:text-lg font-semibold text-slate-900 leading-tight truncate">Biblioteca do Louvor</h1>
-          <p class="text-[11px] sm:text-xs text-slate-500 truncate">Catálogo de músicas do ministério</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 truncate">Catálogo e repertórios do ministério</p>
         </div>
       </div>
 
@@ -46,22 +46,29 @@
           class="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg shadow-xs transition"
         >
           <i data-lucide="upload" class="w-4 h-4 text-slate-500"></i>
-          <span class="hidden sm:inline">Importar ZIP / Excel</span>
-          <span class="sm:hidden">Importar</span>
+          <span class="hidden sm:inline">Importar</span>
+        </button>
+
+        <button
+          id="btn-open-setlist-modal"
+          type="button"
+          title="Montar repertório de um culto"
+          class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs sm:text-sm font-medium px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-lg shadow-sm transition"
+        >
+          <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Novo repertório</span>
+          <span class="sm:hidden">Repertório</span>
         </button>
 
         <button
           id="btn-new-song"
           type="button"
           title="Adicionar nova música (Atalho: N)"
-          class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs sm:text-sm font-medium px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-lg shadow-sm transition"
+          class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs sm:text-sm font-medium px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-lg shadow-sm transition"
         >
           <i data-lucide="plus" class="w-4 h-4"></i>
-          <span class="hidden xs:inline sm:inline">Nova música</span>
-          <span class="xs:hidden sm:hidden">Nova</span>
-          <kbd class="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-500/80 text-indigo-100 rounded border border-indigo-400/40">
-            N
-          </kbd>
+          <span class="hidden sm:inline">Nova música</span>
+          <span class="sm:hidden">Música</span>
         </button>
       </div>
     </div>
@@ -84,133 +91,333 @@
     <!-- Aviso de Erro -->
     <div id="alert-error" class="hidden flex items-center justify-between gap-2 bg-red-50 border border-red-200 text-red-800 px-3.5 py-3 rounded-lg text-sm">
       <span id="alert-error-text"></span>
-      <button type="button" onclick="fetchSongs()" class="underline font-medium shrink-0">Tentar novamente</button>
+      <button type="button" onclick="fetchAllData()" class="underline font-medium shrink-0">Tentar novamente</button>
     </div>
 
-    <!-- Barra de Pesquisa e Filtros -->
-    <div class="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-3">
-      <!-- Barra de Pesquisa (text-base no mobile evita zoom automático no iPhone) -->
-      <div class="relative">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-        <input
-          id="search-input"
-          type="search"
-          placeholder="Pesquisar música, cantor, estilo ou solista..."
-          class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-10 pr-9 py-2.5 text-base sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-        />
-        <button
-          id="btn-clear-search"
-          type="button"
-          class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5"
-          aria-label="Limpar busca"
-        >
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <!-- Filtros: Estilo, Solista, Cantor/Grupo -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-        <div>
-          <label for="filter-style" class="block text-xs font-medium text-slate-600 mb-1">Estilo</label>
-          <select
-            id="filter-style"
-            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          >
-            <option value="">Todos os estilos</option>
-            <option value="Adoração">Adoração</option>
-            <option value="Celebração">Celebração</option>
-            <option value="Missões">Missões</option>
-            <option value="__EMPTY__">Sem estilo definido</option>
-          </select>
+    <!-- Barra de Seleção Ativa (Aparece quando você está montando/editando um repertório e escolhendo músicas na biblioteca) -->
+    <div id="selection-mode-banner" class="hidden bg-emerald-600 text-white rounded-xl p-3.5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-[61px] sm:top-[69px] z-10">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+          <i data-lucide="list-music" class="w-4 h-4"></i>
         </div>
-
-        <div>
-          <label for="filter-soloist" class="block text-xs font-medium text-slate-600 mb-1">Solista</label>
-          <div id="filter-soloist-container"></div>
-        </div>
-
-        <div>
-          <label for="filter-artist" class="block text-xs font-medium text-slate-600 mb-1">Cantor/Grupo</label>
-          <div id="filter-artist-container"></div>
+        <div class="min-w-0">
+          <p class="text-xs text-emerald-100 font-medium">Selecionando músicas para o repertório:</p>
+          <p id="selection-banner-title" class="text-sm font-semibold truncate"></p>
         </div>
       </div>
-
-      <!-- Barra de status dos filtros ativos -->
-      <div id="active-filters-bar" class="hidden pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
-        <span id="filter-results-count"></span>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="selection-banner-count" class="text-xs bg-emerald-700/80 px-2.5 py-1.5 rounded-lg font-medium">0 músicas</span>
         <button
           type="button"
-          onclick="clearAllFilters()"
-          class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium py-1"
+          onclick="openCurrentSetlistDrawer()"
+          class="bg-white text-emerald-700 hover:bg-emerald-50 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg shadow-xs transition"
         >
-          <i data-lucide="filter-x" class="w-3.5 h-3.5"></i>
-          <span>Limpar filtros</span>
+          Ver / Concluir
         </button>
       </div>
     </div>
 
-    <!-- Abas Ativas / Arquivadas -->
-    <div class="flex items-center justify-between border-b border-slate-200">
-      <div class="flex items-center gap-5">
+    <!-- Abas Principais: Ativas | Arquivadas | Repertórios -->
+    <div class="flex items-center justify-between border-b border-slate-200 overflow-x-auto">
+      <div class="flex items-center gap-4 sm:gap-6 shrink-0">
         <button
           id="tab-active"
           type="button"
-          onclick="setViewStatus('active')"
-          class="pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition"
+          onclick="setMainTab('active')"
+          class="pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition whitespace-nowrap"
         >
           Ativas (0)
         </button>
         <button
           id="tab-archived"
           type="button"
-          onclick="setViewStatus('archived')"
-          class="pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition"
+          onclick="setMainTab('archived')"
+          class="pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition whitespace-nowrap"
         >
           Arquivadas (0)
         </button>
+        <button
+          id="tab-setlists"
+          type="button"
+          onclick="setMainTab('setlists')"
+          class="pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition inline-flex items-center gap-1.5 whitespace-nowrap"
+        >
+          <i data-lucide="calendar-days" class="w-4 h-4"></i>
+          <span id="tab-setlists-label">Repertórios (0)</span>
+        </button>
       </div>
-      <span class="hidden sm:inline text-xs text-slate-400">
+      <span class="hidden md:inline text-xs text-slate-400">
         Dica: pressione <kbd class="px-1.5 py-0.5 bg-slate-200/70 text-slate-600 rounded font-mono">N</kbd> para nova música
       </span>
     </div>
 
-    <!-- Estado de Carregamento -->
-    <div id="loading-state" class="py-16 flex flex-col items-center justify-center text-slate-500 gap-2">
-      <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-      <span class="text-sm">Carregando biblioteca...</span>
-    </div>
+    <!-- SEÇÃO 1: BIBLIOTECA DE MÚSICAS (Ativas / Arquivadas) -->
+    <div id="library-view-section" class="space-y-4">
+      <!-- Barra de Pesquisa e Filtros -->
+      <div class="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-3">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Pesquisar música, cantor, estilo ou solista..."
+            class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-10 pr-9 py-2.5 text-base sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+          <button
+            id="btn-clear-search"
+            type="button"
+            class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5"
+            aria-label="Limpar busca"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
 
-    <!-- Estado Vazio / Sem Resultados -->
-    <div id="empty-state" class="hidden bg-white border border-slate-200 rounded-xl p-6 sm:p-8 text-center space-y-3">
-      <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
-        <i data-lucide="music" class="w-5 h-5"></i>
+        <!-- Filtros: Estilo, Solista, Cantor/Grupo, Última vez -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div>
+            <label for="filter-style" class="block text-xs font-medium text-slate-600 mb-1">Estilo</label>
+            <select
+              id="filter-style"
+              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            >
+              <option value="">Todos os estilos</option>
+              <option value="Adoração">Adoração</option>
+              <option value="Celebração">Celebração</option>
+              <option value="Missões">Missões</option>
+              <option value="__EMPTY__">Sem estilo definido</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="filter-soloist" class="block text-xs font-medium text-slate-600 mb-1">Solista</label>
+            <div id="filter-soloist-container"></div>
+          </div>
+
+          <div>
+            <label for="filter-artist" class="block text-xs font-medium text-slate-600 mb-1">Cantor/Grupo</label>
+            <div id="filter-artist-container"></div>
+          </div>
+
+          <div>
+            <label for="filter-recency" class="block text-xs font-medium text-slate-600 mb-1">Última vez tocada</label>
+            <select
+              id="filter-recency"
+              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            >
+              <option value="">Qualquer data</option>
+              <option value="safe">Disponíveis (+30 dias ou nunca)</option>
+              <option value="never">Nunca incluída em repertório</option>
+              <option value="recent">Tocadas nos últimos 30 dias</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Barra de status dos filtros ativos -->
+        <div id="active-filters-bar" class="hidden pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
+          <span id="filter-results-count"></span>
+          <button
+            type="button"
+            onclick="clearAllFilters()"
+            class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium py-1"
+          >
+            <i data-lucide="filter-x" class="w-3.5 h-3.5"></i>
+            <span>Limpar filtros</span>
+          </button>
+        </div>
       </div>
-      <h2 id="empty-title" class="text-base font-medium text-slate-900"></h2>
-      <p id="empty-desc" class="text-sm text-slate-500 max-w-sm mx-auto"></p>
-      <div id="empty-action-wrapper" class="pt-1"></div>
+
+      <!-- Estado de Carregamento -->
+      <div id="loading-state" class="py-16 flex flex-col items-center justify-center text-slate-500 gap-2">
+        <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-sm">Carregando biblioteca...</span>
+      </div>
+
+      <!-- Estado Vazio / Sem Resultados -->
+      <div id="empty-state" class="hidden bg-white border border-slate-200 rounded-xl p-6 sm:p-8 text-center space-y-3">
+        <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+          <i data-lucide="music" class="w-5 h-5"></i>
+        </div>
+        <h2 id="empty-title" class="text-base font-medium text-slate-900"></h2>
+        <p id="empty-desc" class="text-sm text-slate-500 max-w-sm mx-auto"></p>
+        <div id="empty-action-wrapper" class="pt-1"></div>
+      </div>
+
+      <!-- Lista de Cartões para Celular (< 640px) -->
+      <div id="songs-mobile-list" class="hidden sm:hidden space-y-2.5"></div>
+
+      <!-- Tabela de Músicas para Computador/Tablet (>= 640px) -->
+      <div id="songs-table-wrapper" class="hidden sm:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <th scope="col" class="py-3 px-4 w-[28%]">Nome</th>
+              <th scope="col" class="py-3 px-4 w-[20%]">Cantor/Grupo</th>
+              <th scope="col" class="py-3 px-3 w-[14%]">Estilo</th>
+              <th scope="col" class="py-3 px-3 w-[14%]">Solista</th>
+              <th scope="col" class="py-3 px-3 w-[16%]">Última vez</th>
+              <th scope="col" class="py-3 px-3 text-right w-[8%]">
+                <span class="sr-only">Ações</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="songs-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- Lista de Cartões para Celular (visível apenas em telas pequenas < 640px) -->
-    <div id="songs-mobile-list" class="hidden sm:hidden space-y-2.5"></div>
+    <!-- SEÇÃO 2: LISTA DE REPERTÓRIOS POR DATA -->
+    <div id="setlists-view-section" class="hidden space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Repertórios Agendados e Histórico</h2>
+          <p class="text-xs text-slate-500">Crie uma seleção com data definida para atualizar automaticamente há quanto tempo cada música foi tocada.</p>
+        </div>
+        <button
+          type="button"
+          onclick="openNewSetlistModal()"
+          class="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-xs transition shrink-0"
+        >
+          <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+          <span>Criar repertório</span>
+        </button>
+      </div>
 
-    <!-- Tabela de Músicas para Computador/Tablet (visível a partir de 640px) -->
-    <div id="songs-table-wrapper" class="hidden sm:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            <th scope="col" class="py-3 px-4 w-[32%]">Nome</th>
-            <th scope="col" class="py-3 px-4 w-[24%]">Cantor/Grupo</th>
-            <th scope="col" class="py-3 px-4 w-[18%]">Estilo</th>
-            <th scope="col" class="py-3 px-4 w-[18%]">Solista</th>
-            <th scope="col" class="py-3 px-3 text-right w-[8%]">
-              <span class="sr-only">Ações</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody id="songs-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
-      </table>
+      <div id="setlists-empty" class="hidden bg-white border border-slate-200 rounded-xl p-8 text-center space-y-3">
+        <div class="w-11 h-11 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+          <i data-lucide="calendar-days" class="w-5 h-5"></i>
+        </div>
+        <h3 class="text-base font-medium text-slate-900">Nenhum repertório criado ainda</h3>
+        <p class="text-sm text-slate-500 max-w-md mx-auto">Monte o repertório do próximo culto escolhendo a data e selecionando as músicas da biblioteca.</p>
+        <button
+          type="button"
+          onclick="openNewSetlistModal()"
+          class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+        >
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Montar primeiro repertório</span>
+        </button>
+      </div>
+
+      <div id="setlists-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
   </main>
+
+  <!-- Modal: Criar Novo Repertório (Data + Título) -->
+  <div id="modal-new-setlist" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold text-slate-900">Novo Repertório</h2>
+        <button type="button" onclick="closeNewSetlistModal()" class="text-slate-400 hover:text-slate-600 p-1.5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="new-setlist-form" class="space-y-3.5">
+        <div>
+          <label for="input-setlist-date" class="block text-sm font-medium text-slate-700 mb-1">
+            Data do culto / evento <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="input-setlist-date"
+            type="date"
+            required
+            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
+        </div>
+
+        <div>
+          <label for="input-setlist-title" class="block text-sm font-medium text-slate-700 mb-1">
+            Descrição / Culto <span class="text-slate-400 font-normal">(opcional)</span>
+          </label>
+          <input
+            id="input-setlist-title"
+            type="text"
+            placeholder="Ex.: Culto de Domingo (Noite), Santa Ceia..."
+            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
+        </div>
+
+        <p id="setlist-form-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></p>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="closeNewSetlistModal()" class="px-4 py-2.5 sm:py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">
+            Cancelar
+          </button>
+          <button id="btn-create-setlist" type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 sm:py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition">
+            <span>Criar e escolher músicas</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalhes / Edição do Repertório Selecionado -->
+  <div id="modal-setlist-detail" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-xl max-h-[92vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div class="min-w-0 pr-2">
+          <span id="detail-setlist-date-badge" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md"></span>
+          <h2 id="detail-setlist-title" class="text-base font-semibold text-slate-900 mt-1 truncate"></h2>
+        </div>
+        <button type="button" onclick="closeSetlistDetailModal()" class="text-slate-400 hover:text-slate-600 p-1.5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
+        <div class="flex items-center justify-between">
+          <span id="detail-setlist-count" class="text-xs font-medium text-slate-500"></span>
+          <button
+            type="button"
+            onclick="startSelectingForActiveSetlist()"
+            class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition"
+          >
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Adicionar / marcar na biblioteca</span>
+          </button>
+        </div>
+
+        <div id="detail-setlist-empty" class="hidden py-8 text-center text-sm text-slate-500 border border-dashed border-slate-200 rounded-xl">
+          Nenhuma música neste repertório ainda.<br/>
+          <button type="button" onclick="startSelectingForActiveSetlist()" class="mt-2 text-emerald-600 font-semibold underline">
+            Escolher músicas na biblioteca
+          </button>
+        </div>
+
+        <ol id="detail-setlist-songs" class="space-y-2"></ol>
+      </div>
+
+      <div class="px-4 sm:px-5 py-3 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <button
+          type="button"
+          onclick="deleteCurrentSetlist()"
+          class="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-800 px-2.5 py-2 rounded-lg hover:bg-red-50 transition"
+        >
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Excluir repertório</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick="copySetlistToWhatsApp()"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-medium bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg transition"
+          >
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copiar p/ WhatsApp</span>
+          </button>
+          <button
+            type="button"
+            onclick="finishSelectionModeAndClose()"
+            class="px-4 py-2 text-xs sm:text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
+          >
+            Concluir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Importação em Lote (ZIP / Excel) -->
   <div id="modal-import" class="hidden fixed inset-0 z-20 bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -390,7 +597,7 @@
 
         <p id="form-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></p>
 
-        <!-- Alerta de Duplicidade (RN-003) -->
+        <!-- Alerta de Duplicidade -->
         <div id="duplicate-box" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2 text-sm text-amber-900">
           <div class="flex items-start gap-2">
             <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
@@ -437,7 +644,7 @@
     </div>
   </div>
 
-  <!-- Modal: Configuração do Supabase (salva no navegador) -->
+  <!-- Modal: Configuração do Supabase -->
   <div id="modal-config" class="hidden fixed inset-0 z-30 bg-slate-900/60 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
       <div class="flex items-center justify-between">
@@ -489,11 +696,17 @@
     // Estado global
     let supabaseClient = null;
     let songs = [];
-    let viewStatus = 'active';
+    let setlists = [];
+    let setlistSongs = [];
+    let activeSetlistId = null;
+    let isSelectingForSetlist = false;
+
+    let mainTab = 'active'; // 'active' | 'archived' | 'setlists'
     let searchTerm = '';
     let filterStyle = '';
     let filterSoloist = '';
     let filterArtist = '';
+    let filterRecency = '';
     let editingSongId = null;
     let confirmTargetSong = null;
     let successTimer = null;
@@ -550,9 +763,7 @@
       const normTitle = normalizeText(title);
       const normArtist = normalizeText(artist);
 
-      if (MISSIONS_KEYWORDS.some(kw => normTitle.includes(kw))) {
-        return 'Missões';
-      }
+      if (MISSIONS_KEYWORDS.some(kw => normTitle.includes(kw))) return 'Missões';
 
       const isCelebrationTitle = CELEBRATION_KEYWORDS.some(kw => normTitle.includes(kw));
       const isWorshipTitle = WORSHIP_KEYWORDS.some(kw => normTitle.includes(kw));
@@ -570,7 +781,6 @@
 
       if (isCelebrationTitle) return 'Celebração';
       if (isWorshipTitle) return 'Adoração';
-
       return '';
     }
 
@@ -584,6 +794,7 @@
       document.getElementById('btn-new-song').addEventListener('click', () => openSongModal());
       document.getElementById('btn-open-config').addEventListener('click', () => openConfigModal(true));
       document.getElementById('btn-open-import').addEventListener('click', openImportModal);
+      document.getElementById('btn-open-setlist-modal').addEventListener('click', openNewSetlistModal);
 
       document.getElementById('import-file-input').addEventListener('change', handleImportFilesSelected);
       document.getElementById('import-select-all').addEventListener('change', (e) => {
@@ -613,12 +824,22 @@
         renderSongs();
       });
 
+      document.getElementById('filter-recency').addEventListener('change', (e) => {
+        filterRecency = e.target.value;
+        renderSongs();
+      });
+
       document.getElementById('input-title').addEventListener('input', hideDuplicateBox);
       document.getElementById('input-artist').addEventListener('input', hideDuplicateBox);
 
       document.getElementById('song-form').addEventListener('submit', (e) => {
         e.preventDefault();
         submitSong(false);
+      });
+
+      document.getElementById('new-setlist-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        createNewSetlist();
       });
 
       document.getElementById('btn-confirm-action').addEventListener('click', executeToggleArchive);
@@ -639,6 +860,8 @@
           closeSongModal();
           closeConfirmModal();
           closeImportModal();
+          closeNewSetlistModal();
+          closeSetlistDetailModal();
           return;
         }
 
@@ -652,7 +875,9 @@
           !document.getElementById('modal-song').classList.contains('hidden') ||
           !document.getElementById('modal-confirm').classList.contains('hidden') ||
           !document.getElementById('modal-config').classList.contains('hidden') ||
-          !document.getElementById('modal-import').classList.contains('hidden');
+          !document.getElementById('modal-import').classList.contains('hidden') ||
+          !document.getElementById('modal-new-setlist').classList.contains('hidden') ||
+          !document.getElementById('modal-setlist-detail').classList.contains('hidden');
 
         if (anyModalOpen) return;
 
@@ -674,7 +899,7 @@
       }
 
       supabaseClient = window.supabase.createClient(url, key);
-      fetchSongs();
+      fetchAllData();
     }
 
     function openConfigModal(allowClose) {
@@ -724,6 +949,93 @@
       return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/70">${escapeHtml(style)}</span>`;
     }
 
+    // =========================================================================
+    // CÁLCULO DA ÚLTIMA VEZ QUE A MÚSICA FOI INCLUÍDA EM UM REPERTÓRIO
+    // =========================================================================
+    function formatDateBR(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function getNextSundayISO() {
+      const now = new Date();
+      const day = now.getDay(); // 0 = Domingo
+      const diff = day === 0 ? 7 : 7 - day;
+      const nextSun = new Date(now);
+      nextSun.setDate(now.getDate() + diff);
+      const y = nextSun.getFullYear();
+      const m = String(nextSun.getMonth() + 1).padStart(2, '0');
+      const d = String(nextSun.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getSongLastPlayedInfo(songId) {
+      const setlistMap = new Map(setlists.map(sl => [sl.id, sl]));
+      let latestDateStr = null;
+
+      for (const link of setlistSongs) {
+        if (link.song_id !== songId) continue;
+        // Ignora o próprio repertório que está aberto em edição neste momento para não confundir o usuário
+        if (isSelectingForSetlist && link.setlist_id === activeSetlistId) continue;
+
+        const sl = setlistMap.get(link.setlist_id);
+        if (!sl || !sl.service_date) continue;
+
+        if (!latestDateStr || sl.service_date > latestDateStr) {
+          latestDateStr = sl.service_date;
+        }
+      }
+
+      if (!latestDateStr) {
+        return {
+          hasPlayed: false,
+          daysDiff: Infinity,
+          label: 'Nunca tocada',
+          badgeHtml: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">Nunca tocada</span>`
+        };
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const [y, m, d] = latestDateStr.split('-').map(Number);
+      const playedDate = new Date(y, m - 1, d);
+      const diffDays = Math.round((today - playedDate) / (1000 * 60 * 60 * 24));
+
+      let label = '';
+      if (diffDays < 0) {
+        const futureDays = Math.abs(diffDays);
+        label = futureDays === 1 ? 'Amanhã' : `Agendada (${formatDateBR(latestDateStr)})`;
+      } else if (diffDays === 0) {
+        label = 'Hoje';
+      } else if (diffDays === 1) {
+        label = 'Ontem';
+      } else if (diffDays < 14) {
+        label = `Há ${diffDays} dias`;
+      } else if (diffDays < 60) {
+        const weeks = Math.floor(diffDays / 7);
+        label = weeks === 1 ? 'Há 1 semana' : `Há ${weeks} semanas`;
+      } else {
+        const months = Math.floor(diffDays / 30);
+        label = months === 1 ? 'Há 1 mês' : `Há ${months} meses`;
+      }
+
+      let badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'; // +30 dias: liberada!
+      if (diffDays <= 14) {
+        badgeClass = 'bg-rose-50 text-rose-700 border border-rose-200/80'; // Muito recente (<= 14 dias)
+      } else if (diffDays < 30) {
+        badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200/80'; // Recente (15 a 29 dias)
+      }
+
+      return {
+        hasPlayed: true,
+        dateStr: latestDateStr,
+        daysDiff: diffDays,
+        label,
+        badgeHtml: `<span title="Data: ${formatDateBR(latestDateStr)}" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${badgeClass}">${escapeHtml(label)}</span>`
+      };
+    }
+
     function showSuccess(msg) {
       const el = document.getElementById('alert-success');
       document.getElementById('alert-success-text').textContent = msg;
@@ -746,7 +1058,7 @@
       document.getElementById('alert-error').classList.add('hidden');
     }
 
-    async function fetchSongs() {
+    async function fetchAllData() {
       if (!supabaseClient) return;
       hideError();
       document.getElementById('loading-state').classList.remove('hidden');
@@ -754,21 +1066,372 @@
       document.getElementById('songs-mobile-list').classList.add('hidden');
       document.getElementById('empty-state').classList.add('hidden');
 
-      const { data, error } = await supabaseClient
-        .from('songs')
-        .select('id, title, artist, style, soloist, status, created_at, updated_at')
-        .order('title', { ascending: true });
+      const [songsRes, setlistsRes, setlistSongsRes] = await Promise.all([
+        supabaseClient
+          .from('songs')
+          .select('id, title, artist, style, soloist, status, created_at, updated_at')
+          .order('title', { ascending: true }),
+        supabaseClient
+          .from('setlists')
+          .select('id, service_date, title, created_at')
+          .order('service_date', { ascending: false }),
+        supabaseClient
+          .from('setlist_songs')
+          .select('id, setlist_id, song_id, position, created_at')
+          .order('position', { ascending: true })
+      ]);
 
       document.getElementById('loading-state').classList.add('hidden');
 
-      if (error) {
+      if (songsRes.error) {
         showError('Erro ao conectar com o Supabase. Verifique a URL e a Key.');
         return;
       }
 
-      songs = sortSongsAlphabetically(data || []);
+      songs = sortSongsAlphabetically(songsRes.data || []);
+      setlists = setlistsRes.data || [];
+      setlistSongs = setlistSongsRes.data || [];
+
+      if (setlistsRes.error) {
+        showError('Aviso: Execute o SQL das tabelas "setlists" e "setlist_songs" no Supabase para habilitar os repertórios.');
+      }
+
       updateFilterControlsAndDatalists();
+      updateTabsUI();
       renderSongs();
+      renderSetlists();
+    }
+
+    // =========================================================================
+    // GESTÃO DE REPERTÓRIOS POR DATA
+    // =========================================================================
+    function openNewSetlistModal() {
+      document.getElementById('setlist-form-error').classList.add('hidden');
+      document.getElementById('input-setlist-date').value = getNextSundayISO();
+      document.getElementById('input-setlist-title').value = '';
+      document.getElementById('modal-new-setlist').classList.remove('hidden');
+    }
+
+    function closeNewSetlistModal() {
+      document.getElementById('modal-new-setlist').classList.add('hidden');
+    }
+
+    async function createNewSetlist() {
+      const dateVal = document.getElementById('input-setlist-date').value;
+      const titleVal = document.getElementById('input-setlist-title').value.trim();
+      const errEl = document.getElementById('setlist-form-error');
+      const btn = document.getElementById('btn-create-setlist');
+
+      errEl.classList.add('hidden');
+      if (!dateVal) {
+        errEl.textContent = 'Selecione a data do repertório.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      const { data, error } = await supabaseClient
+        .from('setlists')
+        .insert({
+          service_date: dateVal,
+          title: titleVal || `Culto ${formatDateBR(dateVal)}`
+        })
+        .select('id, service_date, title, created_at')
+        .single();
+
+      btn.disabled = false;
+
+      if (error) {
+        errEl.textContent = 'Erro ao criar repertório. Verifique se executou o SQL das tabelas no Supabase.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      setlists = [data, ...setlists].sort((a, b) => b.service_date.localeCompare(a.service_date));
+      closeNewSetlistModal();
+      updateTabsUI();
+      renderSetlists();
+
+      // Ativa o modo de seleção direto na biblioteca
+      activeSetlistId = data.id;
+      isSelectingForSetlist = true;
+      setMainTab('active');
+      updateSelectionBanner();
+      showSuccess(`Repertório de ${formatDateBR(data.service_date)} criado! Marque as músicas abaixo.`);
+    }
+
+    function updateSelectionBanner() {
+      const banner = document.getElementById('selection-mode-banner');
+      if (!isSelectingForSetlist || !activeSetlistId) {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      const sl = setlists.find(s => s.id === activeSetlistId);
+      if (!sl) {
+        isSelectingForSetlist = false;
+        banner.classList.add('hidden');
+        return;
+      }
+
+      const count = setlistSongs.filter(ls => ls.setlist_id === activeSetlistId).length;
+      document.getElementById('selection-banner-title').textContent = `${formatDateBR(sl.service_date)} — ${sl.title || 'Culto'}`;
+      document.getElementById('selection-banner-count').textContent = `${count} ${count === 1 ? 'música' : 'músicas'}`;
+      banner.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function toggleSongInActiveSetlist(songId) {
+      if (!activeSetlistId) return;
+
+      const existing = setlistSongs.find(ls => ls.setlist_id === activeSetlistId && ls.song_id === songId);
+
+      if (existing) {
+        // Remove do repertório
+        const { error } = await supabaseClient
+          .from('setlist_songs')
+          .delete()
+          .eq('id', existing.id);
+
+        if (error) {
+          showError('Erro ao remover música do repertório.');
+          return;
+        }
+        setlistSongs = setlistSongs.filter(ls => ls.id !== existing.id);
+      } else {
+        // Adiciona ao repertório
+        const currentItems = setlistSongs.filter(ls => ls.setlist_id === activeSetlistId);
+        const nextPos = currentItems.length + 1;
+
+        const { data, error } = await supabaseClient
+          .from('setlist_songs')
+          .insert({
+            setlist_id: activeSetlistId,
+            song_id: songId,
+            position: nextPos
+          })
+          .select('id, setlist_id, song_id, position, created_at')
+          .single();
+
+        if (error) {
+          showError('Erro ao adicionar música ao repertório.');
+          return;
+        }
+        setlistSongs = [...setlistSongs, data];
+      }
+
+      updateSelectionBanner();
+      renderSongs();
+      renderSetlists();
+      if (!document.getElementById('modal-setlist-detail').classList.contains('hidden')) {
+        renderSetlistDetailModal();
+      }
+    }
+
+    function openSetlistDetailModal(setlistId) {
+      activeSetlistId = setlistId;
+      renderSetlistDetailModal();
+      document.getElementById('modal-setlist-detail').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function openCurrentSetlistDrawer() {
+      if (!activeSetlistId) return;
+      openSetlistDetailModal(activeSetlistId);
+    }
+
+    function closeSetlistDetailModal() {
+      document.getElementById('modal-setlist-detail').classList.add('hidden');
+    }
+
+    function finishSelectionModeAndClose() {
+      isSelectingForSetlist = false;
+      updateSelectionBanner();
+      closeSetlistDetailModal();
+      renderSongs();
+    }
+
+    function startSelectingForActiveSetlist() {
+      closeSetlistDetailModal();
+      isSelectingForSetlist = true;
+      setMainTab('active');
+      updateSelectionBanner();
+      renderSongs();
+    }
+
+    function renderSetlistDetailModal() {
+      const sl = setlists.find(s => s.id === activeSetlistId);
+      if (!sl) return;
+
+      document.getElementById('detail-setlist-date-badge').textContent = formatDateBR(sl.service_date);
+      document.getElementById('detail-setlist-title').textContent = sl.title || `Culto ${formatDateBR(sl.service_date)}`;
+
+      const items = setlistSongs
+        .filter(ls => ls.setlist_id === sl.id)
+        .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+      document.getElementById('detail-setlist-count').textContent = `${items.length} ${items.length === 1 ? 'música selecionada' : 'músicas selecionadas'}`;
+
+      const listEl = document.getElementById('detail-setlist-songs');
+      const emptyEl = document.getElementById('detail-setlist-empty');
+
+      if (items.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      const songMap = new Map(songs.map(s => [s.id, s]));
+
+      listEl.innerHTML = items.map((item, idx) => {
+        const song = songMap.get(item.song_id);
+        if (!song) return '';
+        return `
+          <li class="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                ${idx + 1}
+              </span>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-slate-900 truncate">${escapeHtml(song.title)}</p>
+                <div class="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                  ${song.artist ? `<span>${escapeHtml(song.artist)}</span>` : ''}
+                  ${song.style ? `<span>• ${escapeHtml(song.style)}</span>` : ''}
+                  ${song.soloist ? `<span>• Solo: <strong>${escapeHtml(song.soloist)}</strong></span>` : ''}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onclick="toggleSongInActiveSetlist('${song.id}')"
+              title="Remover do repertório"
+              class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition shrink-0"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </li>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    async function deleteCurrentSetlist() {
+      if (!activeSetlistId) return;
+      const sl = setlists.find(s => s.id === activeSetlistId);
+      if (!sl) return;
+
+      const { error } = await supabaseClient
+        .from('setlists')
+        .delete()
+        .eq('id', sl.id);
+
+      if (error) {
+        showError('Erro ao excluir o repertório.');
+        return;
+      }
+
+      setlists = setlists.filter(s => s.id !== sl.id);
+      setlistSongs = setlistSongs.filter(ls => ls.setlist_id !== sl.id);
+      isSelectingForSetlist = false;
+      activeSetlistId = null;
+
+      updateSelectionBanner();
+      closeSetlistDetailModal();
+      updateTabsUI();
+      renderSetlists();
+      renderSongs();
+      showSuccess('Repertório excluído.');
+    }
+
+    async function copySetlistToWhatsApp() {
+      const sl = setlists.find(s => s.id === activeSetlistId);
+      if (!sl) return;
+
+      const items = setlistSongs
+        .filter(ls => ls.setlist_id === sl.id)
+        .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+      const songMap = new Map(songs.map(s => [s.id, s]));
+      const lines = [
+        `*REPERTÓRIO — ${formatDateBR(sl.service_date)}*`,
+        sl.title ? `_${sl.title}_` : '',
+        ''
+      ].filter((v, i) => !(i === 1 && v === ''));
+
+      items.forEach((item, idx) => {
+        const song = songMap.get(item.song_id);
+        if (!song) return;
+        const details = [
+          song.artist || null,
+          song.style || null,
+          song.soloist ? `Solo: ${song.soloist}` : null
+        ].filter(Boolean).join(' | ');
+        lines.push(`${idx + 1}. *${song.title}*${details ? ` (${details})` : ''}`);
+      });
+
+      const text = lines.join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        showSuccess('Repertório copiado! Agora é só colar no WhatsApp.');
+      } catch (_) {
+        showError('Não foi possível copiar automaticamente.');
+      }
+    }
+
+    function renderSetlists() {
+      const grid = document.getElementById('setlists-grid');
+      const emptyEl = document.getElementById('setlists-empty');
+      const songMap = new Map(songs.map(s => [s.id, s]));
+
+      if (setlists.length === 0) {
+        grid.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      grid.innerHTML = setlists.map(sl => {
+        const items = setlistSongs.filter(ls => ls.setlist_id === sl.id);
+        const previewTitles = items
+          .slice(0, 4)
+          .map(it => songMap.get(it.song_id)?.title)
+          .filter(Boolean);
+
+        return `
+          <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col justify-between gap-3 hover:border-indigo-300 transition">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  ${formatDateBR(sl.service_date)}
+                </span>
+                <span class="text-xs font-medium text-slate-500">
+                  ${items.length} ${items.length === 1 ? 'música' : 'músicas'}
+                </span>
+              </div>
+              <h3 class="font-semibold text-slate-900 text-base">${escapeHtml(sl.title || `Culto ${formatDateBR(sl.service_date)}`)}</h3>
+              ${previewTitles.length > 0
+                ? `<p class="text-xs text-slate-600 line-clamp-2">${previewTitles.map(escapeHtml).join(' • ')}${items.length > 4 ? ` (+${items.length - 4})` : ''}</p>`
+                : `<p class="text-xs text-slate-400 italic">Nenhuma música adicionada ainda</p>`}
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onclick="openSetlistDetailModal('${sl.id}')"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition"
+              >
+                <i data-lucide="list-music" class="w-3.5 h-3.5"></i>
+                <span>Abrir / Editar músicas</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
     }
 
     // =========================================================================
@@ -1165,17 +1828,18 @@ ${JSON.stringify(unclassified)}`;
 
       songs = sortSongsAlphabetically([...songs, ...(data || [])]);
       closeImportModal();
-      setViewStatus('active');
+      setMainTab('active');
       showSuccess(`${(data || []).length} músicas importadas com sucesso!`);
     }
 
     // =========================================================================
-    // FILTROS E LISTAGEM PRINCIPAL (CARTÕES NO CELULAR + TABELA NO DESKTOP)
+    // FILTROS, ABAS E LISTAGEM PRINCIPAL
     // =========================================================================
     function getUniqueValues(field) {
+      const targetStatus = mainTab === 'archived' ? 'archived' : 'active';
       const map = new Map();
       songs
-        .filter(s => s.status === viewStatus)
+        .filter(s => s.status === targetStatus)
         .forEach(song => {
           const raw = (song[field] || '').trim();
           if (!raw) return;
@@ -1309,27 +1973,50 @@ ${JSON.stringify(unclassified)}`;
       filterStyle = '';
       filterSoloist = '';
       filterArtist = '';
+      filterRecency = '';
       document.getElementById('search-input').value = '';
       document.getElementById('filter-style').value = '';
+      document.getElementById('filter-recency').value = '';
       document.getElementById('btn-clear-search').classList.add('hidden');
       updateFilterControlsAndDatalists();
       renderSongs();
     }
 
-    function setViewStatus(status) {
-      viewStatus = status;
+    function updateTabsUI() {
+      const activeCount = songs.filter(s => s.status === 'active').length;
+      const archivedCount = songs.filter(s => s.status === 'archived').length;
+
+      document.getElementById('tab-active').textContent = `Ativas (${activeCount})`;
+      document.getElementById('tab-archived').textContent = `Arquivadas (${archivedCount})`;
+      document.getElementById('tab-setlists-label').textContent = `Repertórios (${setlists.length})`;
+    }
+
+    function setMainTab(tab) {
+      mainTab = tab;
       const tabActive = document.getElementById('tab-active');
       const tabArchived = document.getElementById('tab-archived');
+      const tabSetlists = document.getElementById('tab-setlists');
 
-      if (status === 'active') {
-        tabActive.className = 'pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition';
-        tabArchived.className = 'pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition';
+      const activeStyle = 'pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition whitespace-nowrap';
+      const inactiveStyle = 'pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition whitespace-nowrap';
+
+      tabActive.className = tab === 'active' ? activeStyle : inactiveStyle;
+      tabArchived.className = tab === 'archived' ? activeStyle : inactiveStyle;
+      tabSetlists.className = `${tab === 'setlists' ? activeStyle : inactiveStyle} inline-flex items-center gap-1.5`;
+
+      const librarySection = document.getElementById('library-view-section');
+      const setlistsSection = document.getElementById('setlists-view-section');
+
+      if (tab === 'setlists') {
+        librarySection.classList.add('hidden');
+        setlistsSection.classList.remove('hidden');
+        renderSetlists();
       } else {
-        tabArchived.className = 'pb-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600 transition';
-        tabActive.className = 'pb-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition';
+        setlistsSection.classList.add('hidden');
+        librarySection.classList.remove('hidden');
+        updateFilterControlsAndDatalists();
+        renderSongs();
       }
-      updateFilterControlsAndDatalists();
-      renderSongs();
     }
 
     function hasActiveSearchOrFilter() {
@@ -1337,24 +2024,28 @@ ${JSON.stringify(unclassified)}`;
         searchTerm.trim() ||
         filterStyle.trim() ||
         filterSoloist.trim() ||
-        filterArtist.trim()
+        filterArtist.trim() ||
+        filterRecency.trim()
       );
     }
 
     function renderSongs() {
-      const activeCount = songs.filter(s => s.status === 'active').length;
-      const archivedCount = songs.filter(s => s.status === 'archived').length;
-
-      document.getElementById('tab-active').textContent = `Ativas (${activeCount})`;
-      document.getElementById('tab-archived').textContent = `Arquivadas (${archivedCount})`;
+      updateTabsUI();
+      if (mainTab === 'setlists') return;
 
       const qSearch = normalizeText(searchTerm);
       const qSoloist = normalizeText(filterSoloist);
       const qArtist = normalizeText(filterArtist);
 
+      const selectedSongIdsInActiveSetlist = new Set(
+        isSelectingForSetlist && activeSetlistId
+          ? setlistSongs.filter(ls => ls.setlist_id === activeSetlistId).map(ls => ls.song_id)
+          : []
+      );
+
       const filtered = sortSongsAlphabetically(
         songs.filter(song => {
-          if (song.status !== viewStatus) return false;
+          if (song.status !== mainTab) return false;
 
           if (filterStyle === '__EMPTY__') {
             if ((song.style || '').trim() !== '') return false;
@@ -1364,6 +2055,13 @@ ${JSON.stringify(unclassified)}`;
 
           if (qSoloist && !normalizeText(song.soloist).includes(qSoloist)) return false;
           if (qArtist && !normalizeText(song.artist).includes(qArtist)) return false;
+
+          if (filterRecency) {
+            const info = getSongLastPlayedInfo(song.id);
+            if (filterRecency === 'never' && info.hasPlayed) return false;
+            if (filterRecency === 'recent' && (!info.hasPlayed || info.daysDiff > 30)) return false;
+            if (filterRecency === 'safe' && info.hasPlayed && info.daysDiff <= 30) return false;
+          }
 
           if (qSearch) {
             const matchSearch =
@@ -1406,85 +2104,128 @@ ${JSON.stringify(unclassified)}`;
       mobileList.classList.remove('hidden');
       tableWrapper.classList.add('sm:block');
 
-      // 1. Renderiza Cartões otimizados para celular (< 640px)
-      mobileList.innerHTML = filtered.map(song => `
-        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1 space-y-1.5">
-            <div>
-              <h3 class="font-semibold text-slate-900 text-sm leading-snug break-words">${escapeHtml(song.title)}</h3>
-              ${song.artist
-                ? `<p class="text-xs text-slate-600 mt-0.5 truncate">${escapeHtml(song.artist)}</p>`
-                : ''}
+      // 1. Cartões para Celular (< 640px)
+      mobileList.innerHTML = filtered.map(song => {
+        const lastInfo = getSongLastPlayedInfo(song.id);
+        const isInSetlist = selectedSongIdsInActiveSetlist.has(song.id);
+
+        return `
+          <div class="bg-white border ${isInSetlist ? 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-50/20' : 'border-slate-200'} rounded-xl p-3.5 shadow-2xs flex items-start justify-between gap-2.5">
+            <div class="min-w-0 flex-1 space-y-1.5">
+              <div>
+                <h3 class="font-semibold text-slate-900 text-sm leading-snug break-words">${escapeHtml(song.title)}</h3>
+                ${song.artist
+                  ? `<p class="text-xs text-slate-600 mt-0.5 truncate">${escapeHtml(song.artist)}</p>`
+                  : ''}
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                ${song.style ? getStyleBadgeHtml(song.style) : ''}
+                ${song.soloist
+                  ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
+                      <i data-lucide="mic" class="w-3 h-3 text-slate-500"></i>
+                      ${escapeHtml(song.soloist)}
+                    </span>`
+                  : ''}
+                ${lastInfo.badgeHtml}
+              </div>
             </div>
-            <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-              ${song.style ? getStyleBadgeHtml(song.style) : ''}
-              ${song.soloist
-                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-                    <i data-lucide="mic" class="w-3 h-3 text-slate-500"></i>
-                    ${escapeHtml(song.soloist)}
-                  </span>`
-                : ''}
+
+            <div class="flex items-center gap-0.5 shrink-0 -mr-1">
+              ${isSelectingForSetlist ? `
+                <button
+                  type="button"
+                  onclick="toggleSongInActiveSetlist('${song.id}')"
+                  class="px-2.5 py-2 rounded-lg text-xs font-semibold transition ${
+                    isInSetlist
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  }"
+                >
+                  ${isInSetlist ? 'No repertório ✓' : '+ Incluir'}
+                </button>
+              ` : `
+                <button
+                  type="button"
+                  onclick="openSongModal('${song.id}')"
+                  aria-label="Editar música"
+                  class="p-2.5 text-slate-500 hover:text-indigo-600 active:bg-indigo-50 rounded-lg transition"
+                >
+                  <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
+                <button
+                  type="button"
+                  onclick="openConfirmModal('${song.id}')"
+                  aria-label="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
+                  class="p-2.5 text-slate-500 hover:text-amber-600 active:bg-amber-50 rounded-lg transition"
+                >
+                  <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
+                </button>
+              `}
             </div>
           </div>
+        `;
+      }).join('');
 
-          <div class="flex items-center gap-0.5 shrink-0 -mr-1">
-            <button
-              type="button"
-              onclick="openSongModal('${song.id}')"
-              aria-label="Editar música"
-              class="p-2.5 text-slate-500 hover:text-indigo-600 active:bg-indigo-50 rounded-lg transition"
-            >
-              <i data-lucide="pencil" class="w-4 h-4"></i>
-            </button>
-            <button
-              type="button"
-              onclick="openConfirmModal('${song.id}')"
-              aria-label="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
-              class="p-2.5 text-slate-500 hover:text-amber-600 active:bg-amber-50 rounded-lg transition"
-            >
-              <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
+      // 2. Tabela para Computador/Tablet (>= 640px)
+      tbody.innerHTML = filtered.map(song => {
+        const lastInfo = getSongLastPlayedInfo(song.id);
+        const isInSetlist = selectedSongIdsInActiveSetlist.has(song.id);
 
-      // 2. Renderiza Tabela para telas maiores (>= 640px)
-      tbody.innerHTML = filtered.map(song => `
-        <tr class="hover:bg-slate-50/80 transition">
-          <td class="py-3.5 px-4 font-medium text-slate-900">
-            ${escapeHtml(song.title)}
-          </td>
-          <td class="py-3.5 px-4 text-slate-600">
-            ${song.artist ? escapeHtml(song.artist) : '<span class="text-slate-400 italic">—</span>'}
-          </td>
-          <td class="py-3.5 px-4 text-slate-600">
-            ${getStyleBadgeHtml(song.style)}
-          </td>
-          <td class="py-3.5 px-4 text-slate-600">
-            ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
-          </td>
-          <td class="py-3.5 px-3 text-right whitespace-nowrap">
-            <div class="inline-flex items-center justify-end gap-1">
-              <button
-                type="button"
-                onclick="openSongModal('${song.id}')"
-                title="Editar música"
-                class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-              >
-                <i data-lucide="pencil" class="w-4 h-4"></i>
-              </button>
-              <button
-                type="button"
-                onclick="openConfirmModal('${song.id}')"
-                title="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
-                class="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
-              >
-                <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
+        return `
+          <tr class="${isInSetlist ? 'bg-emerald-50/40' : 'hover:bg-slate-50/80'} transition">
+            <td class="py-3.5 px-4 font-medium text-slate-900">
+              ${escapeHtml(song.title)}
+            </td>
+            <td class="py-3.5 px-4 text-slate-600">
+              ${song.artist ? escapeHtml(song.artist) : '<span class="text-slate-400 italic">—</span>'}
+            </td>
+            <td class="py-3.5 px-3 text-slate-600">
+              ${getStyleBadgeHtml(song.style)}
+            </td>
+            <td class="py-3.5 px-3 text-slate-600">
+              ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
+            </td>
+            <td class="py-3.5 px-3 whitespace-nowrap">
+              ${lastInfo.badgeHtml}
+            </td>
+            <td class="py-3.5 px-3 text-right whitespace-nowrap">
+              <div class="inline-flex items-center justify-end gap-1">
+                ${isSelectingForSetlist ? `
+                  <button
+                    type="button"
+                    onclick="toggleSongInActiveSetlist('${song.id}')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      isInSetlist
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    }"
+                  >
+                    <i data-lucide="${isInSetlist ? 'check' : 'plus'}" class="w-3.5 h-3.5"></i>
+                    <span>${isInSetlist ? 'Incluída' : 'Incluir'}</span>
+                  </button>
+                ` : `
+                  <button
+                    type="button"
+                    onclick="openSongModal('${song.id}')"
+                    title="Editar música"
+                    class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                  >
+                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onclick="openConfirmModal('${song.id}')"
+                    title="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
+                    class="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                  >
+                    <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
+                  </button>
+                `}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
 
       lucide.createIcons();
     }
@@ -1509,7 +2250,7 @@ ${JSON.stringify(unclassified)}`;
         clearBtn.onclick = clearAllFilters;
         wrapper.appendChild(clearBtn);
 
-        if (viewStatus === 'active' && searchTerm.trim()) {
+        if (mainTab === 'active' && searchTerm.trim()) {
           const addBtn = document.createElement('button');
           addBtn.type = 'button';
           addBtn.className = 'inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 px-3.5 py-2';
@@ -1519,7 +2260,7 @@ ${JSON.stringify(unclassified)}`;
         }
 
         actionEl.appendChild(wrapper);
-      } else if (viewStatus === 'active') {
+      } else if (mainTab === 'active') {
         titleEl.textContent = 'Sua biblioteca ainda está vazia';
         descEl.textContent = 'Comece cadastrando uma música ou importe seu arquivo .zip de cronogramas.';
 
@@ -1675,7 +2416,7 @@ ${JSON.stringify(unclassified)}`;
         }
 
         songs = sortSongsAlphabetically([...songs, data]);
-        setViewStatus('active');
+        setMainTab('active');
         showSuccess(`Música "${cleanTitle}" adicionada à biblioteca.`);
         closeSongModal();
       }
