@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Adora App — Repertórios & Louvor</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -21,10 +23,12 @@
   <div id="auth-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-100 via-indigo-50/40 to-slate-100">
     <!-- Card: Formulários de Entrar / Solicitar Acesso -->
     <div id="auth-card-forms" class="w-full max-w-md bg-white rounded-2xl shadow-lg border border-slate-200 p-6 sm:p-8 space-y-6">
-      <div class="text-center space-y-1.5">
-        <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-sm">
-          <i data-lucide="music" class="w-6 h-6"></i>
-        </div>
+      <div class="text-center space-y-2">
+        <img
+          src="logo.png"
+          alt="Logo Adora App"
+          class="w-16 h-16 rounded-2xl object-contain mx-auto"
+        />
         <h1 class="text-xl font-bold text-slate-900">Adora App</h1>
         <p class="text-xs text-slate-500">Catálogo de músicas e repertórios de louvor</p>
       </div>
@@ -153,8 +157,14 @@
 
     <!-- Card: Aguardando Aprovação / Bloqueado -->
     <div id="auth-card-pending" class="hidden w-full max-w-md bg-white rounded-2xl shadow-lg border border-slate-200 p-6 sm:p-8 text-center space-y-4">
-      <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
-        <i data-lucide="clock" class="w-6 h-6"></i>
+      <img
+        src="logo.png"
+        alt="Logo Adora App"
+        class="w-14 h-14 rounded-2xl object-contain mx-auto"
+      />
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
+        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+        <span>Status do cadastro</span>
       </div>
       <h2 id="pending-title" class="text-lg font-bold text-slate-900">Cadastro aguardando autorização</h2>
       <p id="pending-desc" class="text-sm text-slate-600 leading-relaxed"></p>
@@ -185,9 +195,11 @@
     <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-            <i data-lucide="music" class="w-5 h-5"></i>
-          </div>
+          <img
+            src="logo.png"
+            alt="Logo Adora App"
+            class="w-10 h-10 rounded-xl object-contain shrink-0"
+          />
           <div class="min-w-0">
             <h1 id="header-ministry-name" class="text-base sm:text-lg font-bold text-slate-900 truncate">Adora App</h1>
             <p id="header-user-email" class="text-xs text-slate-500 truncate"></p>
@@ -1677,7 +1689,6 @@
       badge.textContent = String(pendingCount);
       badge.classList.toggle('hidden', pendingCount === 0);
 
-      // Atualiza também o seletor de destino para duplicar catálogo
       const cloneSelect = document.getElementById('clone-target-user-select');
       if (cloneSelect) {
         const otherUsers = allProfilesForAdmin.filter(p => p.id !== currentUser?.id);
@@ -1744,7 +1755,6 @@
         return;
       }
 
-      // Garante que a conta destino também esteja aprovada
       await supabaseClient
         .from('profiles')
         .update({ status: 'approved' })
