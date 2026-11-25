@@ -173,16 +173,6 @@
           </button>
         </div>
       </div>
-
-      <div class="text-center">
-        <button
-          type="button"
-          onclick="openConfigModal(true)"
-          class="text-xs text-slate-400 hover:text-slate-600 underline"
-        >
-          Configurar conexão Supabase
-        </button>
-      </div>
     </div>
   </div>
 
@@ -223,7 +213,7 @@
           id="btn-open-config"
           type="button"
           title="Configurar conexão Supabase"
-          class="p-2 sm:p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+          class="hidden p-2 sm:p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
         >
           <i data-lucide="settings" class="w-4 h-4"></i>
         </button>
@@ -1266,6 +1256,7 @@
 
       const isAdmin = Boolean(currentProfile?.is_admin);
       document.getElementById('btn-open-admin').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btn-open-config').classList.toggle('hidden', !isAdmin);
       lucide.createIcons();
     }
 
