@@ -57,27 +57,29 @@
       <p id="auth-alert-info" class="hidden text-xs sm:text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5"></p>
 
       <!-- Formulário: Entrar -->
-      <form id="login-form" autocomplete="off" class="space-y-4">
+      <form id="login-form" autocomplete="on" class="space-y-4">
         <div>
           <label for="login-email" class="block text-xs font-medium text-slate-700 mb-1">E-mail</label>
           <input
             id="login-email"
-            name="login_email_field"
+            name="email"
             type="email"
             required
-            autocomplete="off"
+            list="saved-emails-datalist"
+            autocomplete="username"
             placeholder="seu@email.com"
             class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          <datalist id="saved-emails-datalist"></datalist>
         </div>
         <div>
           <label for="login-password" class="block text-xs font-medium text-slate-700 mb-1">Senha</label>
           <input
             id="login-password"
-            name="login_password_field"
+            name="password"
             type="password"
             required
-            autocomplete="new-password"
+            autocomplete="current-password"
             placeholder="••••••••"
             class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
@@ -458,6 +460,7 @@
                 <th class="py-3 px-4">Música</th>
                 <th class="py-3 px-4">Cantor / Grupo</th>
                 <th class="py-3 px-3">Estilo</th>
+                <th class="py-3 px-3">Tom</th>
                 <th class="py-3 px-3">Solo</th>
                 <th class="py-3 px-3">Última vez</th>
                 <th class="py-3 px-3 text-right">Ações</th>
@@ -845,6 +848,7 @@
                 <th class="py-2 px-3 font-semibold text-slate-600">Música</th>
                 <th class="py-2 px-3 font-semibold text-slate-600">Cantor / Grupo</th>
                 <th class="py-2 px-3 font-semibold text-slate-600">Estilo</th>
+                <th class="py-2 px-3 font-semibold text-slate-600">Tom</th>
                 <th class="py-2 px-3 font-semibold text-slate-600">Solo</th>
               </tr>
             </thead>
@@ -909,16 +913,55 @@
           <datalist id="datalist-artists"></datalist>
         </div>
 
-        <div>
-          <label for="input-soloist" class="block text-xs font-medium text-slate-700 mb-1">Solista / Ministro</label>
-          <input
-            id="input-soloist"
-            type="text"
-            list="datalist-soloists"
-            placeholder="Ex.: Maria"
-            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <datalist id="datalist-soloists"></datalist>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label for="input-soloist" class="block text-xs font-medium text-slate-700 mb-1">Solista / Ministro</label>
+            <input
+              id="input-soloist"
+              type="text"
+              list="datalist-soloists"
+              placeholder="Ex.: Maria"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <datalist id="datalist-soloists"></datalist>
+          </div>
+          <div>
+            <label for="input-musical-key" class="block text-xs font-medium text-slate-700 mb-1">Tom</label>
+            <input
+              id="input-musical-key"
+              type="text"
+              list="datalist-musical-keys"
+              placeholder="Ex.: G, Bm, C#"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <datalist id="datalist-musical-keys">
+              <option value="C"></option>
+              <option value="C#"></option>
+              <option value="Db"></option>
+              <option value="D"></option>
+              <option value="Eb"></option>
+              <option value="E"></option>
+              <option value="F"></option>
+              <option value="F#"></option>
+              <option value="G"></option>
+              <option value="Ab"></option>
+              <option value="A"></option>
+              <option value="Bb"></option>
+              <option value="B"></option>
+              <option value="Cm"></option>
+              <option value="C#m"></option>
+              <option value="Dm"></option>
+              <option value="Ebm"></option>
+              <option value="Em"></option>
+              <option value="Fm"></option>
+              <option value="F#m"></option>
+              <option value="Gm"></option>
+              <option value="G#m"></option>
+              <option value="Am"></option>
+              <option value="Bbm"></option>
+              <option value="Bm"></option>
+            </datalist>
+          </div>
         </div>
 
         <!-- Seleção múltipla de estilos -->
@@ -1086,7 +1129,46 @@
     const SMALL_LIST_THRESHOLD = 10;
     const STORAGE_URL_KEY = 'louvor_supabase_url';
     const STORAGE_ANON_KEY = 'louvor_supabase_anon_key';
+    const STORAGE_SAVED_EMAILS_KEY = 'adora_saved_emails';
+    const STORAGE_LAST_EMAIL_KEY = 'adora_last_email';
     const BASE_STYLES = ['Adoração', 'Celebração', 'Missões'];
+    let confirmActionMode = 'archive'; // 'archive' | 'delete'
+
+    function getSavedEmails() {
+      try {
+        const raw = localStorage.getItem(STORAGE_SAVED_EMAILS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function rememberLoginEmail(email) {
+      const clean = (email || '').trim().toLowerCase();
+      if (!clean) return;
+      localStorage.setItem(STORAGE_LAST_EMAIL_KEY, clean);
+      const list = getSavedEmails().filter(e => e.toLowerCase() !== clean);
+      list.unshift(clean);
+      localStorage.setItem(STORAGE_SAVED_EMAILS_KEY, JSON.stringify(list.slice(0, 15)));
+      populateSavedEmailsDatalist();
+    }
+
+    function populateSavedEmailsDatalist() {
+      const datalist = document.getElementById('saved-emails-datalist');
+      if (!datalist) return;
+      const emails = getSavedEmails();
+      datalist.innerHTML = emails.map(em => `<option value="${escapeHtml(em)}"></option>`).join('');
+    }
+
+    function restoreRememberedEmailInLogin() {
+      populateSavedEmailsDatalist();
+      const lastEmail = localStorage.getItem(STORAGE_LAST_EMAIL_KEY) || '';
+      const emailInput = document.getElementById('login-email');
+      if (emailInput && lastEmail) {
+        emailInput.value = lastEmail;
+      }
+    }
 
     function parseStylesArray(styleStr) {
       if (!styleStr) return [];
@@ -1197,6 +1279,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
+      restoreRememberedEmailInLogin();
       setupEvents();
       initSupabase();
     });
@@ -1355,15 +1438,11 @@
       if (btn) btn.setAttribute('aria-expanded', 'false');
     }
 
-    function clearAuthFormInputs() {
-      const loginForm = document.getElementById('login-form');
+    function clearAuthFormInputs(keepLastEmail = true) {
       const signupForm = document.getElementById('signup-form');
-      if (loginForm) loginForm.reset();
       if (signupForm) signupForm.reset();
 
       const idsToClear = [
-        'login-email',
-        'login-password',
         'signup-name',
         'signup-ministry',
         'signup-email',
@@ -1376,6 +1455,15 @@
           el.defaultValue = '';
         }
       });
+
+      if (keepLastEmail) {
+        restoreRememberedEmailInLogin();
+      } else {
+        const emailEl = document.getElementById('login-email');
+        const passEl = document.getElementById('login-password');
+        if (emailEl) emailEl.value = '';
+        if (passEl) passEl.value = '';
+      }
     }
 
     function updateUserHeaderInfo() {
@@ -1544,6 +1632,9 @@
       }
 
       currentUser = sessionData.session.user;
+      if (currentUser?.email) {
+        rememberLoginEmail(currentUser.email);
+      }
 
       const { data: profile, error: profErr } = await supabaseClient
         .from('profiles')
@@ -1606,7 +1697,7 @@
         return;
       }
 
-      clearAuthFormInputs();
+      rememberLoginEmail(email);
       await checkSessionAndProfile();
     }
 
@@ -1656,6 +1747,10 @@
     }
 
     async function handleLogout() {
+      const lastEmailBeforeLogout = currentUser?.email || document.getElementById('login-email')?.value || '';
+      if (lastEmailBeforeLogout) {
+        rememberLoginEmail(lastEmailBeforeLogout);
+      }
       closeUserMenu();
       if (supabaseClient) {
         await supabaseClient.auth.signOut();
@@ -1670,8 +1765,7 @@
       updateSelectionBanner();
       switchAuthMode('login');
       showAuthScreen('forms');
-      setTimeout(clearAuthFormInputs, 50);
-      setTimeout(clearAuthFormInputs, 250);
+      restoreRememberedEmailInLogin();
     }
 
     async function fetchAdminProfiles() {
@@ -1757,6 +1851,7 @@
           title: s.title,
           artist: s.artist || null,
           style: s.style || null,
+          musical_key: s.musical_key || null,
           soloist: s.soloist || null,
           status: 'active'
         }));
@@ -2031,7 +2126,7 @@
       const [songsRes, setlistsRes, setlistSongsRes] = await Promise.all([
         supabaseClient
           .from('songs')
-          .select('id, title, artist, style, soloist, status, created_at, updated_at')
+          .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
           .eq('user_id', currentUser.id)
           .order('title', { ascending: true }),
         supabaseClient
@@ -2262,6 +2357,7 @@
                 <div class="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                   ${song.artist ? `<span>${escapeHtml(song.artist)}</span>` : ''}
                   ${song.style ? `<span>• ${escapeHtml(song.style)}</span>` : ''}
+                  ${song.musical_key ? `<span>• Tom: <strong>${escapeHtml(song.musical_key)}</strong></span>` : ''}
                   ${song.soloist ? `<span>• Solo: <strong>${escapeHtml(song.soloist)}</strong></span>` : ''}
                 </div>
               </div>
@@ -2330,6 +2426,7 @@
         const details = [
           song.artist || null,
           song.style || null,
+          song.musical_key ? `Tom: ${song.musical_key}` : null,
           song.soloist ? `Solo: ${song.soloist}` : null
         ].filter(Boolean).join(' | ');
         lines.push(`${idx + 1}. *${song.title}*${details ? ` (${details})` : ''}`);
@@ -2427,6 +2524,7 @@
       let titleIdx = -1;
       let artistIdx = -1;
       let soloistIdx = -1;
+      let keyIdx = -1;
 
       headerRow.forEach((cell, idx) => {
         const h = normalizeText(String(cell || ''));
@@ -2436,12 +2534,14 @@
           titleIdx = idx;
         } else if (artistIdx === -1 && (h.includes('autor') || h.includes('cantor') || h.includes('grupo') || h.includes('artista') || h.includes('banda') || h.includes('interprete'))) {
           artistIdx = idx;
+        } else if (keyIdx === -1 && (h === 'tom' || h === 'key' || h.includes('tonalidade') || h.includes('cifra'))) {
+          keyIdx = idx;
         } else if (soloistIdx === -1 && (h === 'solo' || h.includes('solista') || h.includes('ministro') || h.includes('vocal'))) {
           soloistIdx = idx;
         }
       });
 
-      return { titleIdx, artistIdx, soloistIdx };
+      return { titleIdx, artistIdx, soloistIdx, keyIdx };
     }
 
     function extractRowsFromWorkbook(workbook) {
@@ -2453,7 +2553,7 @@
         if (!rows || rows.length === 0) return;
 
         let headerRowIdx = -1;
-        let colMap = { titleIdx: -1, artistIdx: -1, soloistIdx: -1 };
+        let colMap = { titleIdx: -1, artistIdx: -1, soloistIdx: -1, keyIdx: -1 };
 
         const maxHeaderScan = Math.min(rows.length, 20);
         for (let r = 0; r < maxHeaderScan; r++) {
@@ -2467,7 +2567,7 @@
 
         if (headerRowIdx === -1) {
           headerRowIdx = -1;
-          colMap = { titleIdx: 0, artistIdx: 1, soloistIdx: 2 };
+          colMap = { titleIdx: 0, artistIdx: 1, soloistIdx: 2, keyIdx: 3 };
         }
 
         for (let r = headerRowIdx + 1; r < rows.length; r++) {
@@ -2477,6 +2577,7 @@
           const rawTitle = String(row[colMap.titleIdx] || '').trim();
           const rawArtist = colMap.artistIdx !== -1 ? String(row[colMap.artistIdx] || '').trim() : '';
           const rawSoloist = colMap.soloistIdx !== -1 ? String(row[colMap.soloistIdx] || '').trim() : '';
+          const rawKey = colMap.keyIdx !== -1 ? String(row[colMap.keyIdx] || '').trim() : '';
 
           if (!rawTitle) continue;
 
@@ -2487,6 +2588,7 @@
             title: rawTitle,
             artist: rawArtist,
             soloist: rawSoloist,
+            musical_key: rawKey,
           });
         }
       });
@@ -2605,6 +2707,7 @@
           title: item.title.trim(),
           artist: (item.artist || '').trim(),
           style: item.style ? formatStylesString(parseStylesArray(item.style)) : inferSongStyle(item.title, item.artist),
+          musical_key: (item.musical_key || '').trim(),
           soloist: (item.soloist || '').trim(),
           selected: true,
         });
@@ -2940,6 +3043,7 @@ ${JSON.stringify(unclassified)}`;
               `).join('')}
             </select>
           </td>
+          <td class="py-2 px-3 text-slate-600">${item.musical_key ? escapeHtml(item.musical_key) : '<span class="text-slate-400">—</span>'}</td>
           <td class="py-2 px-3 text-slate-600">${item.soloist ? escapeHtml(item.soloist) : '<span class="text-slate-400">—</span>'}</td>
         </tr>
       `).join('');
@@ -2969,6 +3073,7 @@ ${JSON.stringify(unclassified)}`;
           title: c.title.trim(),
           artist: c.artist.trim() || null,
           style: c.style.trim() || null,
+          musical_key: (c.musical_key || '').trim() || null,
           soloist: c.soloist.trim() || null,
           status: 'active',
         }));
@@ -2986,7 +3091,7 @@ ${JSON.stringify(unclassified)}`;
       const { data, error } = await supabaseClient
         .from('songs')
         .insert(toInsert)
-        .select('id, title, artist, style, soloist, status, created_at, updated_at');
+        .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at');
 
       confirmBtn.disabled = false;
 
@@ -3302,6 +3407,12 @@ ${JSON.stringify(unclassified)}`;
               </div>
               <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
                 ${getStyleBadgesHtml(song.style, '')}
+                ${song.musical_key
+                  ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/70">
+                      <i data-lucide="music" class="w-3 h-3 text-sky-600"></i>
+                      Tom: ${escapeHtml(song.musical_key)}
+                    </span>`
+                  : ''}
                 ${song.soloist
                   ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
                       <i data-lucide="mic" class="w-3 h-3 text-slate-500"></i>
@@ -3330,17 +3441,25 @@ ${JSON.stringify(unclassified)}`;
                   type="button"
                   onclick="openSongModal('${song.id}')"
                   aria-label="Editar música"
-                  class="p-2.5 text-slate-500 hover:text-indigo-600 active:bg-indigo-50 rounded-lg transition"
+                  class="p-2 text-slate-500 hover:text-indigo-600 active:bg-indigo-50 rounded-lg transition"
                 >
                   <i data-lucide="pencil" class="w-4 h-4"></i>
                 </button>
                 <button
                   type="button"
-                  onclick="openConfirmModal('${song.id}')"
+                  onclick="openConfirmModal('${song.id}', 'archive')"
                   aria-label="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
-                  class="p-2.5 text-slate-500 hover:text-amber-600 active:bg-amber-50 rounded-lg transition"
+                  class="p-2 text-slate-500 hover:text-amber-600 active:bg-amber-50 rounded-lg transition"
                 >
                   <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
+                </button>
+                <button
+                  type="button"
+                  onclick="openConfirmModal('${song.id}', 'delete')"
+                  aria-label="Apagar música"
+                  class="p-2 text-slate-500 hover:text-red-600 active:bg-red-50 rounded-lg transition"
+                >
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               `}
             </div>
@@ -3362,6 +3481,11 @@ ${JSON.stringify(unclassified)}`;
             </td>
             <td class="py-3.5 px-3 text-slate-600">
               ${getStyleBadgesHtml(song.style)}
+            </td>
+            <td class="py-3.5 px-3 whitespace-nowrap">
+              ${song.musical_key
+                ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/70">${escapeHtml(song.musical_key)}</span>`
+                : '<span class="text-slate-400 italic">—</span>'}
             </td>
             <td class="py-3.5 px-3 text-slate-600">
               ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
@@ -3395,11 +3519,19 @@ ${JSON.stringify(unclassified)}`;
                   </button>
                   <button
                     type="button"
-                    onclick="openConfirmModal('${song.id}')"
+                    onclick="openConfirmModal('${song.id}', 'archive')"
                     title="${song.status === 'active' ? 'Arquivar música' : 'Restaurar música'}"
                     class="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
                   >
                     <i data-lucide="${song.status === 'active' ? 'archive' : 'rotate-ccw'}" class="w-4 h-4"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onclick="openConfirmModal('${song.id}', 'delete')"
+                    title="Apagar música permanentemente"
+                    class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                  >
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
                   </button>
                 `}
               </div>
@@ -3552,6 +3684,7 @@ ${JSON.stringify(unclassified)}`;
         document.getElementById('input-title').value = song.title;
         document.getElementById('input-artist').value = song.artist || '';
         document.getElementById('input-soloist').value = song.soloist || '';
+        document.getElementById('input-musical-key').value = song.musical_key || '';
         modalSelectedStyles = parseStylesArray(song.style);
       } else {
         document.getElementById('modal-song-title').textContent = 'Nova música';
@@ -3559,6 +3692,7 @@ ${JSON.stringify(unclassified)}`;
         document.getElementById('input-title').value = prefillTitle;
         document.getElementById('input-artist').value = '';
         document.getElementById('input-soloist').value = '';
+        document.getElementById('input-musical-key').value = '';
         modalSelectedStyles = [];
       }
 
@@ -3604,6 +3738,7 @@ ${JSON.stringify(unclassified)}`;
       const cleanArtist = document.getElementById('input-artist').value.trim();
       const cleanStyle = formatStylesString(modalSelectedStyles);
       const cleanSoloist = document.getElementById('input-soloist').value.trim();
+      const cleanMusicalKey = document.getElementById('input-musical-key').value.trim();
 
       if (!cleanTitle) {
         formErr.textContent = 'O nome da música é obrigatório.';
@@ -3629,6 +3764,7 @@ ${JSON.stringify(unclassified)}`;
         title: cleanTitle,
         artist: cleanArtist || null,
         style: cleanStyle || null,
+        musical_key: cleanMusicalKey || null,
         soloist: cleanSoloist || null,
       };
 
@@ -3637,7 +3773,7 @@ ${JSON.stringify(unclassified)}`;
           .from('songs')
           .update(payload)
           .eq('id', editingSongId)
-          .select('id, title, artist, style, soloist, status, created_at, updated_at')
+          .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
           .single();
 
         saveBtn.disabled = false;
@@ -3660,7 +3796,7 @@ ${JSON.stringify(unclassified)}`;
         const { data, error } = await supabaseClient
           .from('songs')
           .insert({ ...payload, user_id: currentUser.id, status: 'active' })
-          .select('id, title, artist, style, soloist, status, created_at, updated_at')
+          .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
           .single();
 
         saveBtn.disabled = false;
@@ -3678,39 +3814,82 @@ ${JSON.stringify(unclassified)}`;
       }
     }
 
-    function openConfirmModal(songId) {
+    function openConfirmModal(songId, mode = 'archive') {
       const song = songs.find(s => s.id === songId);
       if (!song) return;
       confirmTargetSong = song;
-
-      const isArchiving = song.status === 'active';
-      document.getElementById('confirm-title').textContent = isArchiving ? 'Arquivar música?' : 'Restaurar música?';
-      document.getElementById('confirm-desc').textContent = isArchiving
-        ? `A música "${song.title}" sairá da lista principal, mas continuará salva no histórico e poderá ser restaurada quando quiser.`
-        : `A música "${song.title}" voltará a aparecer na lista principal da biblioteca.`;
+      confirmActionMode = mode;
 
       const confirmBtn = document.getElementById('btn-confirm-action');
-      confirmBtn.textContent = isArchiving ? 'Arquivar' : 'Restaurar';
+
+      if (mode === 'delete') {
+        document.getElementById('confirm-title').textContent = 'Apagar música permanentemente?';
+        document.getElementById('confirm-desc').textContent =
+          `Tem certeza que deseja apagar "${song.title}"? Ela será excluída definitivamente do catálogo e dos repertórios em que estiver vinculada.`;
+        confirmBtn.textContent = 'Apagar música';
+        confirmBtn.className = 'px-4 py-2.5 sm:py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg';
+      } else {
+        const isArchiving = song.status === 'active';
+        document.getElementById('confirm-title').textContent = isArchiving ? 'Arquivar música?' : 'Restaurar música?';
+        document.getElementById('confirm-desc').textContent = isArchiving
+          ? `A música "${song.title}" sairá da lista principal, mas continuará salva no histórico e poderá ser restaurada quando quiser.`
+          : `A música "${song.title}" voltará a aparecer na lista principal da biblioteca.`;
+        confirmBtn.textContent = isArchiving ? 'Arquivar' : 'Restaurar';
+        confirmBtn.className = 'px-4 py-2.5 sm:py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg';
+      }
+
       document.getElementById('modal-confirm').classList.remove('hidden');
     }
 
     function closeConfirmModal() {
       document.getElementById('modal-confirm').classList.add('hidden');
       confirmTargetSong = null;
+      confirmActionMode = 'archive';
     }
 
     async function executeToggleArchive() {
       if (!confirmTargetSong) return;
       const target = confirmTargetSong;
-      const nextStatus = target.status === 'active' ? 'archived' : 'active';
+      const mode = confirmActionMode;
       const confirmBtn = document.getElementById('btn-confirm-action');
       confirmBtn.disabled = true;
+
+      if (mode === 'delete') {
+        await supabaseClient
+          .from('setlist_songs')
+          .delete()
+          .eq('song_id', target.id);
+
+        const { error } = await supabaseClient
+          .from('songs')
+          .delete()
+          .eq('id', target.id);
+
+        confirmBtn.disabled = false;
+        closeConfirmModal();
+
+        if (error) {
+          showError('Não foi possível apagar a música. Verifique a permissão DELETE no Supabase.');
+          return;
+        }
+
+        songs = songs.filter(s => s.id !== target.id);
+        setlistSongs = setlistSongs.filter(ls => ls.song_id !== target.id);
+        updateSelectionBanner();
+        updateFilterControlsAndDatalists();
+        renderSongs();
+        renderSetlists();
+        showSuccess(`Música "${target.title}" apagada permanentemente.`);
+        return;
+      }
+
+      const nextStatus = target.status === 'active' ? 'archived' : 'active';
 
       const { data, error } = await supabaseClient
         .from('songs')
         .update({ status: nextStatus })
         .eq('id', target.id)
-        .select('id, title, artist, style, soloist, status, created_at, updated_at')
+        .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
         .single();
 
       confirmBtn.disabled = false;
