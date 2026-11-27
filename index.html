@@ -462,6 +462,7 @@
                 <th class="py-3 px-3">Estilo</th>
                 <th class="py-3 px-3">Tom</th>
                 <th class="py-3 px-3">Solo</th>
+                <th class="py-3 px-3">Versão</th>
                 <th class="py-3 px-3">Última vez</th>
                 <th class="py-3 px-3 text-right">Ações</th>
               </tr>
@@ -911,6 +912,16 @@
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <datalist id="datalist-artists"></datalist>
+        </div>
+
+        <div>
+          <label for="input-reference-link" class="block text-xs font-medium text-slate-700 mb-1">Link da versão (YouTube / Spotify / Drive)</label>
+          <input
+            id="input-reference-link"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1853,6 +1864,7 @@
           style: s.style || null,
           musical_key: s.musical_key || null,
           soloist: s.soloist || null,
+          reference_link: s.reference_link || null,
           status: 'active'
         }));
 
@@ -1982,6 +1994,14 @@
         if (titleCompare !== 0) return titleCompare;
         return (a.artist || '').localeCompare(b.artist || '', 'pt-BR', { sensitivity: 'base' });
       });
+    }
+
+    function sanitizeSafeUrl(rawUrl) {
+      const clean = (rawUrl || '').trim();
+      if (!clean) return '';
+      if (/^https?:\/\//i.test(clean)) return clean;
+      if (/^[a-z0-9-]+\.[a-z]{2,}/i.test(clean)) return 'https://' + clean;
+      return '';
     }
 
     function escapeHtml(text) {
@@ -2126,7 +2146,7 @@
       const [songsRes, setlistsRes, setlistSongsRes] = await Promise.all([
         supabaseClient
           .from('songs')
-          .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
+          .select('id, title, artist, style, musical_key, soloist, reference_link, status, created_at, updated_at')
           .eq('user_id', currentUser.id)
           .order('title', { ascending: true }),
         supabaseClient
@@ -2359,6 +2379,7 @@
                   ${song.style ? `<span>• ${escapeHtml(song.style)}</span>` : ''}
                   ${song.musical_key ? `<span>• Tom: <strong>${escapeHtml(song.musical_key)}</strong></span>` : ''}
                   ${song.soloist ? `<span>• Solo: <strong>${escapeHtml(song.soloist)}</strong></span>` : ''}
+                  ${sanitizeSafeUrl(song.reference_link) ? `<span>• <a href="${escapeHtml(sanitizeSafeUrl(song.reference_link))}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-indigo-600 hover:underline font-medium">Ouvir versão <i data-lucide="external-link" class="w-3 h-3"></i></a></span>` : ''}
                 </div>
               </div>
             </div>
@@ -2429,7 +2450,8 @@
           song.musical_key ? `Tom: ${song.musical_key}` : null,
           song.soloist ? `Solo: ${song.soloist}` : null
         ].filter(Boolean).join(' | ');
-        lines.push(`${idx + 1}. *${song.title}*${details ? ` (${details})` : ''}`);
+        const safeLink = sanitizeSafeUrl(song.reference_link);
+        lines.push(`${idx + 1}. *${song.title}*${details ? ` (${details})` : ''}${safeLink ? `\n   🔗 ${safeLink}` : ''}`);
       });
 
       const text = lines.join('\n');
@@ -2525,6 +2547,7 @@
       let artistIdx = -1;
       let soloistIdx = -1;
       let keyIdx = -1;
+      let linkIdx = -1;
 
       headerRow.forEach((cell, idx) => {
         const h = normalizeText(String(cell || ''));
@@ -2538,10 +2561,12 @@
           keyIdx = idx;
         } else if (soloistIdx === -1 && (h === 'solo' || h.includes('solista') || h.includes('ministro') || h.includes('vocal'))) {
           soloistIdx = idx;
+        } else if (linkIdx === -1 && (h === 'link' || h.includes('url') || h.includes('youtube') || h.includes('spotify') || h.includes('versao') || h.includes('referencia') || h.includes('audio') || h.includes('video'))) {
+          linkIdx = idx;
         }
       });
 
-      return { titleIdx, artistIdx, soloistIdx, keyIdx };
+      return { titleIdx, artistIdx, soloistIdx, keyIdx, linkIdx };
     }
 
     function extractRowsFromWorkbook(workbook) {
@@ -2553,7 +2578,7 @@
         if (!rows || rows.length === 0) return;
 
         let headerRowIdx = -1;
-        let colMap = { titleIdx: -1, artistIdx: -1, soloistIdx: -1, keyIdx: -1 };
+        let colMap = { titleIdx: -1, artistIdx: -1, soloistIdx: -1, keyIdx: -1, linkIdx: -1 };
 
         const maxHeaderScan = Math.min(rows.length, 20);
         for (let r = 0; r < maxHeaderScan; r++) {
@@ -2567,7 +2592,7 @@
 
         if (headerRowIdx === -1) {
           headerRowIdx = -1;
-          colMap = { titleIdx: 0, artistIdx: 1, soloistIdx: 2, keyIdx: 3 };
+          colMap = { titleIdx: 0, artistIdx: 1, soloistIdx: 2, keyIdx: 3, linkIdx: 4 };
         }
 
         for (let r = headerRowIdx + 1; r < rows.length; r++) {
@@ -2578,6 +2603,7 @@
           const rawArtist = colMap.artistIdx !== -1 ? String(row[colMap.artistIdx] || '').trim() : '';
           const rawSoloist = colMap.soloistIdx !== -1 ? String(row[colMap.soloistIdx] || '').trim() : '';
           const rawKey = colMap.keyIdx !== -1 ? String(row[colMap.keyIdx] || '').trim() : '';
+          const rawLink = colMap.linkIdx !== -1 ? sanitizeSafeUrl(String(row[colMap.linkIdx] || '').trim()) : '';
 
           if (!rawTitle) continue;
 
@@ -2589,6 +2615,7 @@
             artist: rawArtist,
             soloist: rawSoloist,
             musical_key: rawKey,
+            reference_link: rawLink,
           });
         }
       });
@@ -2709,6 +2736,7 @@
           style: item.style ? formatStylesString(parseStylesArray(item.style)) : inferSongStyle(item.title, item.artist),
           musical_key: (item.musical_key || '').trim(),
           soloist: (item.soloist || '').trim(),
+          reference_link: sanitizeSafeUrl(item.reference_link || ''),
           selected: true,
         });
       }
@@ -3075,6 +3103,7 @@ ${JSON.stringify(unclassified)}`;
           style: c.style.trim() || null,
           musical_key: (c.musical_key || '').trim() || null,
           soloist: c.soloist.trim() || null,
+          reference_link: sanitizeSafeUrl(c.reference_link) || null,
           status: 'active',
         }));
 
@@ -3091,7 +3120,7 @@ ${JSON.stringify(unclassified)}`;
       const { data, error } = await supabaseClient
         .from('songs')
         .insert(toInsert)
-        .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at');
+        .select('id, title, artist, style, musical_key, soloist, reference_link, status, created_at, updated_at');
 
       confirmBtn.disabled = false;
 
@@ -3419,6 +3448,18 @@ ${JSON.stringify(unclassified)}`;
                       ${escapeHtml(song.soloist)}
                     </span>`
                   : ''}
+                ${sanitizeSafeUrl(song.reference_link)
+                  ? `<a
+                      href="${escapeHtml(sanitizeSafeUrl(song.reference_link))}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onclick="event.stopPropagation()"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200/80 transition"
+                    >
+                      <i data-lucide="play-circle" class="w-3 h-3"></i>
+                      <span>Ouvir</span>
+                    </a>`
+                  : ''}
                 ${lastInfo.badgeHtml}
               </div>
             </div>
@@ -3489,6 +3530,20 @@ ${JSON.stringify(unclassified)}`;
             </td>
             <td class="py-3.5 px-3 text-slate-600">
               ${song.soloist ? escapeHtml(song.soloist) : '<span class="text-slate-400 italic">—</span>'}
+            </td>
+            <td class="py-3.5 px-3 whitespace-nowrap">
+              ${sanitizeSafeUrl(song.reference_link)
+                ? `<a
+                    href="${escapeHtml(sanitizeSafeUrl(song.reference_link))}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Abrir versão de referência em nova aba"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200/80 transition"
+                  >
+                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
+                    <span>Ouvir</span>
+                  </a>`
+                : '<span class="text-slate-400 italic">—</span>'}
             </td>
             <td class="py-3.5 px-3 whitespace-nowrap">
               ${lastInfo.badgeHtml}
@@ -3685,6 +3740,7 @@ ${JSON.stringify(unclassified)}`;
         document.getElementById('input-artist').value = song.artist || '';
         document.getElementById('input-soloist').value = song.soloist || '';
         document.getElementById('input-musical-key').value = song.musical_key || '';
+        document.getElementById('input-reference-link').value = song.reference_link || '';
         modalSelectedStyles = parseStylesArray(song.style);
       } else {
         document.getElementById('modal-song-title').textContent = 'Nova música';
@@ -3693,6 +3749,7 @@ ${JSON.stringify(unclassified)}`;
         document.getElementById('input-artist').value = '';
         document.getElementById('input-soloist').value = '';
         document.getElementById('input-musical-key').value = '';
+        document.getElementById('input-reference-link').value = '';
         modalSelectedStyles = [];
       }
 
@@ -3739,9 +3796,17 @@ ${JSON.stringify(unclassified)}`;
       const cleanStyle = formatStylesString(modalSelectedStyles);
       const cleanSoloist = document.getElementById('input-soloist').value.trim();
       const cleanMusicalKey = document.getElementById('input-musical-key').value.trim();
+      const rawReferenceLink = document.getElementById('input-reference-link').value.trim();
+      const cleanReferenceLink = sanitizeSafeUrl(rawReferenceLink);
 
       if (!cleanTitle) {
         formErr.textContent = 'O nome da música é obrigatório.';
+        formErr.classList.remove('hidden');
+        return;
+      }
+
+      if (rawReferenceLink && !cleanReferenceLink) {
+        formErr.textContent = 'Informe um link válido começando com https:// (ex.: https://youtu.be/...).';
         formErr.classList.remove('hidden');
         return;
       }
@@ -3766,6 +3831,7 @@ ${JSON.stringify(unclassified)}`;
         style: cleanStyle || null,
         musical_key: cleanMusicalKey || null,
         soloist: cleanSoloist || null,
+        reference_link: cleanReferenceLink || null,
       };
 
       if (editingSongId) {
@@ -3773,7 +3839,7 @@ ${JSON.stringify(unclassified)}`;
           .from('songs')
           .update(payload)
           .eq('id', editingSongId)
-          .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
+          .select('id, title, artist, style, musical_key, soloist, reference_link, status, created_at, updated_at')
           .single();
 
         saveBtn.disabled = false;
@@ -3796,7 +3862,7 @@ ${JSON.stringify(unclassified)}`;
         const { data, error } = await supabaseClient
           .from('songs')
           .insert({ ...payload, user_id: currentUser.id, status: 'active' })
-          .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
+          .select('id, title, artist, style, musical_key, soloist, reference_link, status, created_at, updated_at')
           .single();
 
         saveBtn.disabled = false;
@@ -3889,7 +3955,7 @@ ${JSON.stringify(unclassified)}`;
         .from('songs')
         .update({ status: nextStatus })
         .eq('id', target.id)
-        .select('id, title, artist, style, musical_key, soloist, status, created_at, updated_at')
+        .select('id, title, artist, style, musical_key, soloist, reference_link, status, created_at, updated_at')
         .single();
 
       confirmBtn.disabled = false;
